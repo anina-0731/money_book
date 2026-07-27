@@ -3,11 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的荷包管家-支持批量导入与退款关联</title>
+    <title>我的荷包管家 - 智能记账系统 Pro</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS (用于 Excel / CSV 批量解析) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- PDF.js (用于 PDF 账单文本提取) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
@@ -30,13 +35,15 @@
 </head>
 <body class="text-slate-800 min-h-screen pb-12">
 
+    <!-- 顶部导航与数据操作栏 -->
     <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
         <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
             <div class="flex items-center space-x-3">
                 <i class="fa-solid fa-wallet text-2xl text-blue-600"></i>
-                <h1 class="text-xl font-bold text-slate-800">我的荷包管家</h1>
+                <h1 class="text-xl font-bold text-slate-800">我的荷包管家 Pro</h1>
             </div>
             
+            <!-- 数据备份/恢复与模板下载 -->
             <div class="flex items-center space-x-2 text-sm">
                 <button onclick="downloadTemplate()" class="bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition flex items-center space-x-1">
                     <i class="fa-solid fa-file-excel"></i>
@@ -57,6 +64,7 @@
 
     <main class="max-w-6xl mx-auto px-4 py-6 space-y-6">
 
+        <!-- 汇总概览卡片 -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
                 <div class="text-xs text-slate-500 font-medium mb-1">总收入</div>
@@ -76,8 +84,10 @@
             </div>
         </div>
 
+        <!-- 账单解析与手动录入面板 -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
+            <!-- 批量导入文件 (支持 CSV/Excel/PDF) -->
             <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm lg:col-span-2">
                 <h2 class="text-base font-semibold mb-3 flex items-center space-x-2">
                     <i class="fa-solid fa-file-import text-blue-500"></i>
@@ -94,6 +104,7 @@
                 </div>
             </div>
 
+            <!-- 单笔手动记账 -->
             <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
                 <h2 class="text-base font-semibold mb-3 flex items-center space-x-2">
                     <i class="fa-solid fa-pen-to-square text-emerald-500"></i>
@@ -142,10 +153,14 @@
             </div>
         </div>
 
+        <!-- 图表分析模块 -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                <h3 class="text-sm font-semibold mb-2 text-slate-700">支出分类占比</h3>
-                <div class="h-64">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-sm font-semibold text-slate-700">支出分类占比</h3>
+                    <span class="text-xs text-slate-400">💡 点击饼图分类可联动筛选下方明细</span>
+                </div>
+                <div class="h-64 cursor-pointer">
                     <canvas id="categoryChart"></canvas>
                 </div>
             </div>
@@ -157,14 +172,19 @@
             </div>
         </div>
 
-        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <!-- 明细列表与筛选过滤 -->
+        <div id="detailTableSection" class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden transition-all duration-300">
             <div class="p-4 border-b border-slate-100 flex flex-wrap justify-between items-center gap-3">
                 <h2 class="text-base font-semibold flex items-center space-x-2">
                     <i class="fa-solid fa-list-check text-indigo-500"></i>
                     <span>交易明细列表</span>
+                    <span id="activeCategoryTag" class="hidden bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full items-center gap-1">
+                        <span id="activeCategoryText"></span>
+                        <i class="fa-solid fa-xmark cursor-pointer" onclick="clearCategoryFilter()"></i>
+                    </span>
                 </h2>
                 <div class="flex items-center space-x-2">
-                    <input type="text" id="searchInput" placeholder="搜索说明或分类..." oninput="renderAll()" class="border border-slate-200 rounded-lg px-3 py-1 text-sm focus:outline-none">
+                    <input type="text" id="searchInput" placeholder="搜索说明或分类..." oninput="renderAll()" class="border border-slate-200 rounded-lg px-3 py-1 text-sm focus:outline-none focus:border-blue-500">
                     <button onclick="clearAllData()" class="text-xs text-rose-500 border border-rose-200 hover:bg-rose-50 px-2 py-1 rounded-lg transition">
                         清空所有数据
                     </button>
@@ -184,7 +204,8 @@
                         </tr>
                     </thead>
                     <tbody id="transactionTbody" class="divide-y divide-slate-100">
-                        </tbody>
+                        <!-- 动态渲染 -->
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -221,6 +242,34 @@
         function saveLocalData() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
             renderAll();
+        }
+
+        // 核心 Bug 修复：将 Excel 数字序列号（如 46200.8）转化为“YYYY-MM-DD”标准日期字符串
+        function parseExcelDate(excelDate) {
+            if (!excelDate) return '';
+            
+            // 如果已经是标准日期字符串格式 (例如 "2026-07-27")
+            if (typeof excelDate === 'string' && excelDate.includes('-')) {
+                return excelDate.trim().slice(0, 10);
+            }
+            if (typeof excelDate === 'string' && excelDate.includes('/')) {
+                return excelDate.trim().replace(/\//g, '-').slice(0, 10);
+            }
+
+            // 如果是 Excel 浮点型数字序列号 (如 46200.8)
+            const num = parseFloat(excelDate);
+            if (!isNaN(num)) {
+                // Excel 时间以 1900-01-01 为起点，需计算毫秒偏移
+                const utcDays = num - 25569;
+                const dateObj = new Date(utcDays * 86400 * 1000);
+                
+                const yyyy = dateObj.getFullYear();
+                const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const dd = String(dateObj.getDate()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}`;
+            }
+
+            return String(excelDate).trim().slice(0, 10);
         }
 
         // 单笔新增
@@ -308,7 +357,8 @@
                         const row = jsonRows[i];
                         if (!row || row.length === 0) continue;
 
-                        const dateRaw = row[timeCol] ? String(row[timeCol]).trim().slice(0, 10) : '';
+                        // 使用修复后的日期转化函数 parseExcelDate
+                        const dateRaw = parseExcelDate(row[timeCol]);
                         const desc = row[descCol] ? String(row[descCol]).trim() : '';
                         const amount = row[amountCol] ? Math.abs(parseFloat(row[amountCol])) : 0;
                         let type = row[typeCol] ? String(row[typeCol]).trim() : '支出';
@@ -335,7 +385,7 @@
                     if (importedList.length > 0) {
                         transactions = importedList.concat(transactions);
                         saveLocalData();
-                        alert(`成功导入 ${importedList.length} 条交易记录！`);
+                        alert(`成功导入 ${importedList.length} 条交易记录！已自动修正日期。`);
                     } else {
                         alert('未提取到合规的账单数据');
                     }
@@ -363,6 +413,13 @@
             }
         }
 
+        // 清除当前选中的分类联动过滤
+        function clearCategoryFilter() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('activeCategoryTag').classList.add('hidden');
+            renderAll();
+        }
+
         // 下载标准 Excel 模板
         function downloadTemplate() {
             const sampleData = [
@@ -375,12 +432,26 @@
             const ws = XLSX.utils.aoa_to_sheet(sampleData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "模板");
-            XLSX.writeFile(wb, "智能记账批量导入模版示例.xlsx");
+            XLSX.writeFile(wb, "我的荷包管家模版示例.xlsx");
         }
 
         // 渲染页面及更新图表
         function renderAll() {
-            const searchKeyword = document.getElementById('searchInput').value.trim().toLowerCase();
+            const searchInput = document.getElementById('searchInput');
+            const searchKeyword = searchInput.value.trim().toLowerCase();
+
+            // 更新顶部选中的分类 Tag
+            const activeCategoryTag = document.getElementById('activeCategoryTag');
+            const activeCategoryText = document.getElementById('activeCategoryText');
+            if (searchKeyword) {
+                activeCategoryText.innerText = `筛选: ${searchKeyword}`;
+                activeCategoryTag.classList.remove('hidden');
+                activeCategoryTag.classList.add('flex');
+            } else {
+                activeCategoryTag.classList.add('hidden');
+                activeCategoryTag.classList.remove('flex');
+            }
+
             const filtered = transactions.filter(t => 
                 t.desc.toLowerCase().includes(searchKeyword) || 
                 t.category.toLowerCase().includes(searchKeyword)
@@ -430,7 +501,7 @@
                         <td class="p-3 text-slate-500 whitespace-nowrap">${t.date}</td>
                         <td class="p-3 font-medium text-slate-700">${t.desc}</td>
                         <td class="p-3">${typeBadge}</td>
-                        <td class="p-3"><span class="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-xs">${t.category}</span></td>
+                        <td class="p-3"><span class="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-xs cursor-pointer" onclick="filterByCategory('${t.category}')">${t.category}</span></td>
                         <td class="p-3 text-right font-mono ${amountColor}">￥${t.amount.toFixed(2)}</td>
                         <td class="p-3 text-center">
                             <button onclick="deleteTransaction('${t.id}')" class="text-slate-400 hover:text-rose-500 transition px-2 py-1">
@@ -442,7 +513,21 @@
                 });
             }
 
-            renderCharts(filtered);
+            renderCharts(transactions); // 图表根据全局数据保持完整结构
+        }
+
+        // 分类筛选与跳转动画
+        function filterByCategory(categoryName) {
+            document.getElementById('searchInput').value = categoryName;
+            renderAll();
+
+            // 滚动定位到列表并高亮显示
+            const section = document.getElementById('detailTableSection');
+            section.scrollIntoView({ behavior: 'smooth' });
+            section.classList.add('ring-2', 'ring-blue-400');
+            setTimeout(() => {
+                section.classList.remove('ring-2', 'ring-blue-400');
+            }, 1500);
         }
 
         // 图表渲染
@@ -472,6 +557,14 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12 } }
+                    },
+                    // 问题二实现：点击饼图区域直接跳转筛选下方明细
+                    onClick: (event, elements) => {
+                        if (elements && elements.length > 0) {
+                            const index = elements[0].index;
+                            const clickedCategory = catLabels[index];
+                            filterByCategory(clickedCategory);
+                        }
                     }
                 }
             });
@@ -480,7 +573,7 @@
             const monthMap = {};
             data.filter(t => t.type === '支出').forEach(t => {
                 const month = t.date.slice(0, 7);
-                monthMap[month] = (monthMap[month] || 0) + t.amount;
+                if (month) monthMap[month] = (monthMap[month] || 0) + t.amount;
             });
 
             const monthLabels = Object.keys(monthMap).sort();
@@ -517,7 +610,7 @@
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(transactions, null, 2));
             const dl = document.createElement('a');
             dl.setAttribute("href", dataStr);
-            dl.setAttribute("download", `智能记账系统备份_${new Date().toISOString().slice(0,10)}.json`);
+            dl.setAttribute("download", `我的荷包管家备份_${new Date().toISOString().slice(0,10)}.json`);
             dl.click();
             dl.remove();
         }
