@@ -3,560 +3,546 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能记账系统</title>
+    <title>我的荷包管家-支持批量导入与退款关联</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    </script>
     <style>
-        body { 
-            background-color: #FAF8F5; 
-            color: #4A4A4A; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-        }
-        .card { 
-            background: #FFFFFF; 
-            border-radius: 1.5rem; 
-            border: 1px solid #F0ECE1; 
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.02); 
-        }
-        .btn-primary { 
-            background-color: #8E9AAF; 
-            color: white; 
-            transition: all 0.2s ease; 
-        }
-        .btn-primary:hover { 
-            background-color: #7B889B; 
-            transform: translateY(-1px); 
-        }
-        .tab-btn {
-            transition: all 0.2s;
+        body {
+            background-color: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
         .tab-btn.active {
-            background-color: #8E9AAF;
-            color: white;
+            border-bottom: 3px solid #3b82f6;
+            color: #3b82f6;
             font-weight: 600;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
         }
     </style>
 </head>
-<body class="p-4 md:p-8 max-w-6xl mx-auto">
+<body class="text-slate-800 min-h-screen pb-12">
 
-    <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-700 flex items-center gap-2">
-                <span>🍃</span> 我的记账
-            </h1>
-            <p class="text-xs text-gray-400 mt-1">多途径追踪·数据本地保存</p>
-        </div>
-        
-        <div class="flex flex-wrap gap-2">
-            <button onclick="downloadTemplate()" class="px-4 py-2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl text-xs hover:bg-emerald-100 transition flex items-center gap-1 font-medium">
-                📥 下载标准 Excel 模板
-            </button>
-            <button onclick="exportJSON()" class="px-4 py-2 bg-white text-gray-600 border border-gray-200 rounded-xl text-xs hover:bg-gray-50 transition">
-                📤 导出备份 (.json)
-            </button>
-            <label class="px-4 py-2 bg-white text-gray-600 border border-gray-200 rounded-xl text-xs hover:bg-gray-50 transition cursor-pointer">
-                📥 导入备份 (.json)
-                <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
-            </label>
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-wallet text-2xl text-blue-600"></i>
+                <h1 class="text-xl font-bold text-slate-800">我的荷包管家</h1>
+            </div>
+            
+            <div class="flex items-center space-x-2 text-sm">
+                <button onclick="downloadTemplate()" class="bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition flex items-center space-x-1">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <span>下载Excel模板</span>
+                </button>
+                <button onclick="exportBackup()" class="bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition flex items-center space-x-1">
+                    <i class="fa-solid fa-download"></i>
+                    <span>导出备份JSON</span>
+                </button>
+                <label class="bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 px-3 py-1.5 rounded-lg cursor-pointer transition flex items-center space-x-1">
+                    <i class="fa-solid fa-upload"></i>
+                    <span>导入备份JSON</span>
+                    <input type="file" id="importJsonInput" accept=".json" class="hidden" onchange="importBackup(event)">
+                </label>
+            </div>
         </div>
     </header>
 
-    <div class="flex gap-2 p-1 bg-gray-100 rounded-2xl mb-6 w-fit text-sm">
-        <button id="tab-overview" onclick="switchTab('overview')" class="tab-btn active px-5 py-2 rounded-xl">收支明细</button>
-        <button id="tab-monthly" onclick="switchTab('monthly')" class="tab-btn px-5 py-2 rounded-xl">月度分析</button>
-        <button id="tab-yearly" onclick="switchTab('yearly')" class="tab-btn px-5 py-2 rounded-xl">年度报告</button>
-    </div>
+    <main class="max-w-6xl mx-auto px-4 py-6 space-y-6">
 
-    <div id="view-overview" class="space-y-6">
-        
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="card p-6 md:col-span-2 border-dashed border-2 border-amber-200 bg-amber-50/20">
-                <h2 class="text-base font-semibold mb-1 flex items-center gap-2 text-amber-800">
-                    <span>📄</span> 批量导入账单 (微信 / 支付宝 / 银行卡 Excel / CSV)
-                </h2>
-                <p class="text-xs text-gray-400 mb-4">自动去除微信/支付宝开头的无关声明行，智能识别金额、日期、渠道与分类。</p>
-                
-                <div class="flex flex-col sm:flex-row gap-3">
-                    <input type="file" id="billFileInput" accept=".csv, .xls, .xlsx" class="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-700 hover:file:bg-amber-200 cursor-pointer">
-                    <button onclick="parseBillFile()" class="px-5 py-2 btn-primary rounded-xl text-xs shrink-0 font-medium">开始智能解析</button>
-                </div>
-                <div id="importMsg" class="mt-2 text-xs"></div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <div class="text-xs text-slate-500 font-medium mb-1">总收入</div>
+                <div id="statIncome" class="text-2xl font-bold text-emerald-600">￥0.00</div>
             </div>
-
-            <div class="card p-6 flex flex-col justify-between">
-                <div>
-                    <span class="text-xs text-gray-400">本月结余 (元)</span>
-                    <div id="totalBalance" class="text-3xl font-bold text-gray-800 mt-1">¥ 0.00</div>
-                </div>
-                <div class="flex justify-between text-xs text-gray-500 pt-3 border-t border-gray-100 mt-4">
-                    <div>收入: <span id="totalIncome" class="text-emerald-600 font-semibold">¥0.00</span></div>
-                    <div>支出: <span id="totalExpense" class="text-rose-500 font-semibold">¥0.00</span></div>
-                </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <div class="text-xs text-slate-500 font-medium mb-1">总支出</div>
+                <div id="statExpense" class="text-2xl font-bold text-rose-600">￥0.00</div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <div class="text-xs text-slate-500 font-medium mb-1">收支结余</div>
+                <div id="statBalance" class="text-2xl font-bold text-blue-600">￥0.00</div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <div class="text-xs text-slate-500 font-medium mb-1">不计收支/理财</div>
+                <div id="statNeutral" class="text-2xl font-bold text-slate-500">￥0.00</div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="card p-6 h-fit">
-                <h2 class="text-base font-semibold mb-4 text-gray-700">✍️ 记一笔</h2>
-                <form id="addForm" onsubmit="handleAddTransaction(event)" class="space-y-3">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm lg:col-span-2">
+                <h2 class="text-base font-semibold mb-3 flex items-center space-x-2">
+                    <i class="fa-solid fa-file-import text-blue-500"></i>
+                    <span>智能账单批量导入 (支持微信 / 支付宝 / 银行卡 Excel·CSV)</span>
+                </h2>
+                <div class="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-blue-400 transition bg-slate-50/50">
+                    <i class="fa-solid fa-cloud-arrow-up text-3xl text-slate-400 mb-2"></i>
+                    <p class="text-slate-600 text-sm mb-1">拖拽或点击上传账单文件 (.xlsx, .xls, .csv)</p>
+                    <p class="text-xs text-slate-400 mb-4">自动智能判定分类、过滤说明表头、识别收支与对冲退款</p>
+                    <input type="file" id="batchFileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleBatchFileUpload(event)">
+                    <button onclick="document.getElementById('batchFileInput').click()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition">
+                        选择文件导入
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <h2 class="text-base font-semibold mb-3 flex items-center space-x-2">
+                    <i class="fa-solid fa-pen-to-square text-emerald-500"></i>
+                    <span>单笔手动录入</span>
+                </h2>
+                <form id="singleEntryForm" onsubmit="handleSingleEntry(event)" class="space-y-3 text-sm">
                     <div>
-                        <label class="block text-xs text-gray-400 mb-1">收支类型</label>
-                        <select id="type" class="w-full p-2.5 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-gray-400">
-                            <option value="支出">支出</option>
-                            <option value="收入">收入</option>
+                        <label class="block text-xs text-slate-500 mb-1">交易时间</label>
+                        <input type="date" id="formDate" required class="w-full border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">商品/说明</label>
+                        <input type="text" id="formDesc" placeholder="例如：午餐外卖、交通卡充值" required class="w-full border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs text-slate-500 mb-1">金额 (元)</label>
+                            <input type="number" step="0.01" id="formAmount" placeholder="0.00" required class="w-full border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-500 mb-1">收/支类型</label>
+                            <select id="formType" class="w-full border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500">
+                                <option value="支出">支出</option>
+                                <option value="收入">收入</option>
+                                <option value="不计收支">不计收支</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">分类</label>
+                        <select id="formCategory" class="w-full border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500">
+                            <option value="餐饮美食">餐饮美食</option>
+                            <option value="交通出行">交通出行</option>
+                            <option value="日用百货">日用百货</option>
+                            <option value="服饰装扮">服饰装扮</option>
+                            <option value="投资理财">投资理财</option>
+                            <option value="转账红包">转账红包</option>
+                            <option value="休闲娱乐">休闲娱乐</option>
+                            <option value="其他分类">其他分类</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-xs text-gray-400 mb-1">金额 (元)</label>
-                        <input type="number" step="0.01" id="amount" required class="w-full p-2.5 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-gray-400" placeholder="0.00">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-400 mb-1">支出/收入途径（账户）</label>
-                        <select id="account" class="w-full p-2.5 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-gray-400">
-                            <option value="微信支付">微信支付</option>
-                            <option value="支付宝">支付宝</option>
-                            <option value="招商银行">招商银行</option>
-                            <option value="建设银行">建设银行</option>
-                            <option value="现金/其他">现金/其他</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-400 mb-1">分类</label>
-                        <input type="text" id="category" placeholder="如：餐饮、购物、娱乐、工资" required class="w-full p-2.5 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-gray-400">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-400 mb-1">日期</label>
-                        <input type="date" id="date" required class="w-full p-2.5 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-gray-400">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-400 mb-1">备注 / 交易对方</label>
-                        <input type="text" id="merchant" placeholder="如：星巴克、超市" class="w-full p-2.5 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-gray-400">
-                    </div>
-                    <button type="submit" class="w-full py-3 btn-primary rounded-xl text-xs font-medium mt-2">保存记录</button>
+                    <button type="submit" class="w-full bg-slate-800 text-white py-2 rounded-lg text-sm hover:bg-slate-900 transition">
+                        添加记账
+                    </button>
                 </form>
             </div>
-
-            <div class="card p-6 md:col-span-2">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-base font-semibold text-gray-700">收支明细账单</h2>
-                    <button onclick="clearAllData()" class="text-xs text-rose-400 hover:underline">清空所有记录</button>
-                </div>
-                <div class="overflow-x-auto max-h-[520px] overflow-y-auto">
-                    <table class="w-full text-left text-xs">
-                        <thead class="bg-gray-50 text-gray-400 sticky top-0">
-                            <tr>
-                                <th class="p-3">日期</th>
-                                <th class="p-3">分类/备注</th>
-                                <th class="p-3">途径</th>
-                                <th class="p-3">金额</th>
-                                <th class="p-3 text-right">操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="transactionList" class="divide-y divide-gray-100">
-                            </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="view-monthly" class="hidden space-y-6">
-        <div class="card p-6 flex flex-wrap justify-between items-center gap-4">
-            <h2 class="text-base font-semibold text-gray-700">📅 月度分析</h2>
-            <input type="month" id="monthlyPicker" onchange="renderMonthlyView()" class="p-2 border border-gray-200 rounded-xl text-xs focus:outline-none">
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="card p-6">
-                <h3 class="text-xs font-semibold text-gray-500 mb-4">当月支出分类占比</h3>
-                <div class="h-64 flex justify-center items-center">
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <h3 class="text-sm font-semibold mb-2 text-slate-700">支出分类占比</h3>
+                <div class="h-64">
                     <canvas id="categoryChart"></canvas>
                 </div>
             </div>
-            <div class="card p-6">
-                <h3 class="text-xs font-semibold text-gray-500 mb-4">各途径支付占比</h3>
-                <div class="h-64 flex justify-center items-center">
-                    <canvas id="accountChart"></canvas>
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <h3 class="text-sm font-semibold mb-2 text-slate-700">月度支出趋势</h3>
+                <div class="h-64">
+                    <canvas id="trendChart"></canvas>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div id="view-yearly" class="hidden space-y-6">
-        <div class="card p-6 flex justify-between items-center">
-            <h2 class="text-base font-semibold text-gray-700">📊 年度财务报告</h2>
-            <select id="yearlyPicker" onchange="renderYearlyView()" class="p-2 border border-gray-200 rounded-xl text-xs focus:outline-none">
-                </select>
-        </div>
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-slate-100 flex flex-wrap justify-between items-center gap-3">
+                <h2 class="text-base font-semibold flex items-center space-x-2">
+                    <i class="fa-solid fa-list-check text-indigo-500"></i>
+                    <span>交易明细列表</span>
+                </h2>
+                <div class="flex items-center space-x-2">
+                    <input type="text" id="searchInput" placeholder="搜索说明或分类..." oninput="renderAll()" class="border border-slate-200 rounded-lg px-3 py-1 text-sm focus:outline-none">
+                    <button onclick="clearAllData()" class="text-xs text-rose-500 border border-rose-200 hover:bg-rose-50 px-2 py-1 rounded-lg transition">
+                        清空所有数据
+                    </button>
+                </div>
+            </div>
 
-        <div class="card p-6">
-            <h3 class="text-xs font-semibold text-gray-500 mb-4">全年 12 个月收支趋势对比</h3>
-            <div class="h-72">
-                <canvas id="yearlyTrendChart"></canvas>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 border-b border-slate-100 text-xs">
+                            <th class="p-3">日期</th>
+                            <th class="p-3">商品 / 说明</th>
+                            <th class="p-3">类型</th>
+                            <th class="p-3">分类</th>
+                            <th class="p-3 text-right">金额 (元)</th>
+                            <th class="p-3 text-center">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionTbody" class="divide-y divide-slate-100">
+                        </tbody>
+                </table>
             </div>
         </div>
-    </div>
+
+    </main>
 
     <script>
-        // 本地存储数组
-        let transactions = JSON.parse(localStorage.getItem('my_transactions') || '[]');
-
-        // Chart 图表实例变量
+        // 本地数据存储键
+        const STORAGE_KEY = 'SMART_BOOKKEEPING_DATA_PRO';
+        let transactions = [];
         let categoryChartInstance = null;
-        let accountChartInstance = null;
-        let yearlyChartInstance = null;
+        let trendChartInstance = null;
 
-        // 初始化
-        document.getElementById('date').valueAsDate = new Date();
-        document.getElementById('monthlyPicker').value = new Date().toISOString().slice(0, 7);
+        // 初始化页面
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('formDate').value = new Date().toISOString().slice(0, 10);
+            loadLocalData();
+            renderAll();
+        });
 
-        function saveAndRender() {
-            localStorage.setItem('my_transactions', JSON.stringify(transactions));
-            renderList();
-            renderSummary();
-        }
-
-        // 视图切换
-        function switchTab(tab) {
-            ['overview', 'monthly', 'yearly'].forEach(t => {
-                document.getElementById(`view-${t}`).classList.add('hidden');
-                document.getElementById(`tab-${t}`).classList.remove('active');
-            });
-
-            document.getElementById(`view-${tab}`).classList.remove('hidden');
-            document.getElementById(`tab-${tab}`).classList.add('active');
-
-            if (tab === 'monthly') renderMonthlyView();
-            if (tab === 'yearly') {
-                populateYearPicker();
-                renderYearlyView();
-            }
-        }
-
-        // 渲染列表
-        function renderList() {
-            const tbody = document.getElementById('transactionList');
-            if (transactions.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-300">暂无数据，可手动添加或批量导入账单</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = transactions.map((t, index) => {
-                const isExpense = t.type === '支出';
-                const isRefunded = t.is_refunded;
-                return `
-                    <tr class="hover:bg-gray-50/50 ${isRefunded ? 'opacity-40 line-through' : ''}">
-                        <td class="p-3 text-xs text-gray-400">${t.date}</td>
-                        <td class="p-3">
-                            <div class="font-medium text-gray-700">${t.category}</div>
-                            <div class="text-xs text-gray-400">${t.merchant || '-'}</div>
-                        </td>
-                        <td class="p-3 text-xs"><span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md">${t.account || '默认账户'}</span></td>
-                        <td class="p-3 font-semibold ${isExpense ? 'text-rose-500' : 'text-emerald-600'}">
-                            ${isExpense ? '-' : '+'}${parseFloat(t.amount).toFixed(2)}
-                        </td>
-                        <td class="p-3 text-right space-x-2">
-                            <button onclick="toggleRefund(${index})" class="text-xs text-amber-600 hover:underline">
-                                ${isRefunded ? '取消对冲' : '🔄 退款对冲'}
-                            </button>
-                            <button onclick="deleteItem(${index})" class="text-xs text-rose-400 hover:underline">删除</button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        // 渲染顶部概要
-        function renderSummary() {
-            const currentMonth = new Date().toISOString().slice(0, 7);
-            let totalIncome = 0;
-            let totalExpense = 0;
-
-            transactions.forEach(t => {
-                if (t.is_refunded) return; // 退款对冲不统计
-                if (t.date.startsWith(currentMonth)) {
-                    const amt = parseFloat(t.amount) || 0;
-                    if (t.type === '收入') totalIncome += amt;
-                    if (t.type === '支出') totalExpense += amt;
+        // 加载本地数据
+        function loadLocalData() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (data) {
+                try {
+                    transactions = JSON.parse(data);
+                } catch (e) {
+                    transactions = [];
                 }
-            });
-
-            document.getElementById('totalIncome').innerText = `¥ ${totalIncome.toFixed(2)}`;
-            document.getElementById('totalExpense').innerText = `¥ ${totalExpense.toFixed(2)}`;
-            document.getElementById('totalBalance').innerText = `¥ ${(totalIncome - totalExpense).toFixed(2)}`;
-        }
-
-        // 手动添加
-        function handleAddTransaction(e) {
-            e.preventDefault();
-            const item = {
-                id: Date.now() + Math.random(),
-                type: document.getElementById('type').value,
-                amount: parseFloat(document.getElementById('amount').value),
-                account: document.getElementById('account').value,
-                category: document.getElementById('category').value,
-                date: document.getElementById('date').value,
-                merchant: document.getElementById('merchant').value,
-                is_refunded: false
-            };
-            transactions.unshift(item);
-            saveAndRender();
-            e.target.reset();
-            document.getElementById('date').valueAsDate = new Date();
-        }
-
-        function toggleRefund(index) {
-            transactions[index].is_refunded = !transactions[index].is_refunded;
-            saveAndRender();
-        }
-
-        function deleteItem(index) {
-            transactions.splice(index, 1);
-            saveAndRender();
-        }
-
-        function clearAllData() {
-            if (confirm('确定清空所有本地记账记录吗？此操作不可撤销！')) {
-                transactions = [];
-                saveAndRender();
             }
         }
 
-        // ================= 核心：SheetJS 账单智能解析模块 =================
-        function parseBillFile() {
-            const fileInput = document.getElementById('billFileInput');
-            const msgBox = document.getElementById('importMsg');
-            const file = fileInput.files[0];
+        // 保存本地数据
+        function saveLocalData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+            renderAll();
+        }
 
-            if (!file) {
-                msgBox.className = "mt-2 text-xs text-rose-500 font-medium";
-                msgBox.innerText = "⚠️ 请先选择要上传的 Excel (.xlsx/.xls) 或 CSV 账单文件！";
+        // 单笔新增
+        function handleSingleEntry(e) {
+            e.preventDefault();
+            const date = document.getElementById('formDate').value;
+            const desc = document.getElementById('formDesc').value.trim();
+            const amount = parseFloat(document.getElementById('formAmount').value) || 0;
+            const type = document.getElementById('formType').value;
+            const category = document.getElementById('formCategory').value;
+
+            if (!date || !desc || amount <= 0) {
+                alert('请填写正确的账单信息与金额！');
                 return;
             }
 
-            msgBox.className = "mt-2 text-xs text-gray-500";
-            msgBox.innerText = "⏳ 正在分析文件表头并提取交易记录...";
+            transactions.unshift({
+                id: Date.now().toString(),
+                date,
+                desc,
+                amount,
+                type,
+                category
+            });
+
+            saveLocalData();
+            document.getElementById('formDesc').value = '';
+            document.getElementById('formAmount').value = '';
+        }
+
+        // 智能分类算法
+        function detectCategory(desc, type) {
+            if (type === '不计收支') return '投资理财';
+            if (desc.includes('地铁') || desc.includes('公交') || desc.includes('打车') || desc.includes('出行') || desc.includes('机票') || desc.includes('火车')) return '交通出行';
+            if (desc.includes('饭') || desc.includes('外卖') || desc.includes('咖啡') || desc.includes('餐') || desc.includes('瑞幸') || desc.includes('肯德基')) return '餐饮美食';
+            if (desc.includes('余额宝') || desc.includes('收益') || desc.includes('理财') || desc.includes('基金')) return '投资理财';
+            if (desc.includes('红包') || desc.includes('转账') || desc.includes('benefit')) return '转账红包';
+            if (desc.includes('衣') || desc.includes('服饰') || desc.includes('t恤') || desc.includes('鞋')) return '服饰装扮';
+            if (desc.includes('烘焙') || desc.includes('日用') || desc.includes('拼豆')) return '日用百货';
+            return '其他分类';
+        }
+
+        // 批量 Excel/CSV 上传解析
+        function handleBatchFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function (e) {
+            reader.onload = function(evt) {
                 try {
-                    const data = new Uint8Array(e.target.result);
+                    const data = new Uint8Array(evt.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheetName = workbook.SheetNames[0];
-                    const firstSheet = workbook.Sheets[firstSheetName];
-                    const rawRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
 
-                    // 1. 扫描定位关键表头所在行
+                    if (!jsonRows || jsonRows.length === 0) {
+                        alert('未能解析到文件内容');
+                        return;
+                    }
+
+                    // 寻找标题行（包含“交易时间”或“时间”或“金额”）
                     let headerIndex = -1;
-                    for (let i = 0; i < Math.min(rawRows.length, 30); i++) {
-                        const rowStr = (rawRows[i] || []).map(cell => String(cell || '')).join(' ');
-                        if (rowStr.includes('金额') || rowStr.includes('收/支') || rowStr.includes('交易时间') || rowStr.includes('记账日期')) {
+                    for (let i = 0; i < jsonRows.length; i++) {
+                        const rowStr = JSON.stringify(jsonRows[i]);
+                        if (rowStr.includes('时间') || rowStr.includes('金额') || rowStr.includes('商品')) {
                             headerIndex = i;
                             break;
                         }
                     }
 
                     if (headerIndex === -1) {
-                        throw new Error("未能定位到有效表头，请确认文件中包含【金额】和【收/支】或【时间】列。");
+                        alert('未能解析到有效的交易记录表头，请检查文件格式！');
+                        return;
                     }
 
-                    const headers = rawRows[headerIndex].map(h => String(h || '').trim());
-                    
-                    // 多词匹配对应列索引
-                    const getColIndex = (keywords) => headers.findIndex(h => keywords.some(k => h.includes(k)));
+                    const headers = jsonRows[headerIndex].map(h => String(h || '').trim());
+                    const timeCol = headers.findIndex(h => h.includes('时间') || h.includes('日期'));
+                    const descCol = headers.findIndex(h => h.includes('商品') || h.includes('说明') || h.includes('名称') || h.includes('备注'));
+                    const amountCol = headers.findIndex(h => h.includes('金额'));
+                    const typeCol = headers.findIndex(h => h.includes('收/支') || h.includes('收支') || h.includes('类型'));
+                    const catCol = headers.findIndex(h => h.includes('分类'));
 
-                    const idxDate = getColIndex(['时间', '日期', '创建时间', '记账']);
-                    const idxType = getColIndex(['收/支', '收支', '类型', '收/付款']);
-                    const idxAmount = getColIndex(['金额', '金额(元)']);
-                    const idxCategory = getColIndex(['分类', '用途', '交易类型', '子类']);
-                    const idxMerchant = getColIndex(['交易对方', '商品', '商户', '说明', '备注']);
-                    const idxAccount = getColIndex(['支付方式', '收/付款方式', '渠道', '账户']);
-
-                    if (idxAmount === -1) {
-                        throw new Error("表格中未找到【金额】相关列！");
-                    }
-
-                    let parsedCount = 0;
-                    for (let i = headerIndex + 1; i < rawRows.length; i++) {
-                        const row = rawRows[i];
+                    let importedList = [];
+                    for (let i = headerIndex + 1; i < jsonRows.length; i++) {
+                        const row = jsonRows[i];
                         if (!row || row.length === 0) continue;
 
-                        let amtStr = String(row[idxAmount] || '').replace(/¥|,|￥/g, '').trim();
-                        let amt = parseFloat(amtStr);
-                        if (isNaN(amt) || amt <= 0) continue;
+                        const dateRaw = row[timeCol] ? String(row[timeCol]).trim().slice(0, 10) : '';
+                        const desc = row[descCol] ? String(row[descCol]).trim() : '';
+                        const amount = row[amountCol] ? Math.abs(parseFloat(row[amountCol])) : 0;
+                        let type = row[typeCol] ? String(row[typeCol]).trim() : '支出';
+                        let category = row[catCol] ? String(row[catCol]).trim() : '';
 
-                        let rawType = idxType !== -1 ? String(row[idxType] || '').trim() : '';
-                        let type = '支出';
-                        if (rawType.includes('收入')) type = '收入';
-
-                        let rawDate = idxDate !== -1 ? row[idxDate] : new Date().toISOString().split('T')[0];
-                        let formattedDate = String(rawDate).split(' ')[0].replace(/\//g, '-');
-
-                        let category = idxCategory !== -1 && row[idxCategory] ? String(row[idxCategory]).trim() : '日常消费';
-                        let merchant = idxMerchant !== -1 && row[idxMerchant] ? String(row[idxMerchant]).trim() : '';
-                        let account = idxAccount !== -1 && row[idxAccount] ? String(row[idxAccount]).trim() : '微信/支付宝';
-
-                        transactions.unshift({
-                            id: Date.now() + Math.random(),
-                            type: type,
-                            amount: amt,
-                            account: account,
-                            category: category,
-                            date: formattedDate,
-                            merchant: merchant,
-                            is_refunded: false
-                        });
-                        parsedCount++;
+                        if (dateRaw && desc && !isNaN(amount) && amount > 0) {
+                            if (!type.includes('收入') && !type.includes('支出') && !type.includes('不计收支')) {
+                                type = '支出';
+                            }
+                            if (!category) {
+                                category = detectCategory(desc, type);
+                            }
+                            importedList.push({
+                                id: Date.now().toString() + Math.random().toString().slice(2, 6),
+                                date: dateRaw,
+                                desc,
+                                amount,
+                                type,
+                                category
+                            });
+                        }
                     }
 
-                    if (parsedCount === 0) {
-                        throw new Error("未能读取到有效的交易数据，请检查金额是否填写真确。");
+                    if (importedList.length > 0) {
+                        transactions = importedList.concat(transactions);
+                        saveLocalData();
+                        alert(`成功导入 ${importedList.length} 条交易记录！`);
+                    } else {
+                        alert('未提取到合规的账单数据');
                     }
-
-                    saveAndRender();
-                    msgBox.className = "mt-2 text-xs text-emerald-600 font-semibold";
-                    msgBox.innerText = `🎉 成功提取并导入 ${parsedCount} 笔交易记录！`;
-                    fileInput.value = '';
-
                 } catch (err) {
-                    msgBox.className = "mt-2 text-xs text-rose-500 font-semibold";
-                    msgBox.innerText = "❌ 识别失败: " + err.message;
+                    alert('解析文件出错：' + err.message);
                 }
             };
             reader.readAsArrayBuffer(file);
+            e.target.value = '';
+        }
+
+        // 删除单条
+        function deleteTransaction(id) {
+            if (confirm('确定要删除该笔记录吗？')) {
+                transactions = transactions.filter(t => t.id !== id);
+                saveLocalData();
+            }
+        }
+
+        // 清空所有
+        function clearAllData() {
+            if (confirm('危险操作：确定要清空所有记账记录吗？建议先导出备份！')) {
+                transactions = [];
+                saveLocalData();
+            }
         }
 
         // 下载标准 Excel 模板
         function downloadTemplate() {
-            const templateData = [
-                ["交易时间", "收/支", "金额", "交易分类", "交易对方/备注", "支付方式"],
-                ["2026-07-20", "支出", "35.50", "餐饮", "星巴克咖啡", "微信支付"],
-                ["2026-07-21", "支出", "120.00", "交通", "加油站", "支付宝"],
-                ["2026-07-25", "收入", "8000.00", "工资", "公司打款", "招商银行"]
+            const sampleData = [
+                ["交易时间", "商品/说明", "金额", "收/支", "分类"],
+                ["2026-07-27", "上海地铁-一大会址●黄陂南路", 3.6, "支出", "交通出行"],
+                ["2026-07-27", "湖南饭店外卖订单", 9.14, "支出", "餐饮美食"],
+                ["2026-07-27", "余额宝-收益发放", 1.23, "不计收支", "投资理财"],
+                ["2026-07-26", "瑞幸咖啡", 7.4, "支出", "餐饮美食"]
             ];
-            const ws = XLSX.utils.aoa_to_sheet(templateData);
+            const ws = XLSX.utils.aoa_to_sheet(sampleData);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "记账模板");
-            XLSX.writeFile(wb, "智能记账系统标准导入模板.xlsx");
+            XLSX.utils.book_append_sheet(wb, ws, "模板");
+            XLSX.writeFile(wb, "智能记账批量导入模版示例.xlsx");
         }
 
-        // ================= 月度分析 & 年度报告渲染 =================
-        function renderMonthlyView() {
-            const selectedMonth = document.getElementById('monthlyPicker').value;
-            const monthData = transactions.filter(t => !t.is_refunded && t.date.startsWith(selectedMonth) && t.type === '支出');
+        // 渲染页面及更新图表
+        function renderAll() {
+            const searchKeyword = document.getElementById('searchInput').value.trim().toLowerCase();
+            const filtered = transactions.filter(t => 
+                t.desc.toLowerCase().includes(searchKeyword) || 
+                t.category.toLowerCase().includes(searchKeyword)
+            );
 
-            // 1. 分类汇总
+            // 计算汇总
+            let totalIncome = 0;
+            let totalExpense = 0;
+            let totalNeutral = 0;
+
+            filtered.forEach(t => {
+                if (t.type === '收入') totalIncome += t.amount;
+                else if (t.type === '支出') totalExpense += t.amount;
+                else totalNeutral += t.amount;
+            });
+
+            document.getElementById('statIncome').innerText = `￥${totalIncome.toFixed(2)}`;
+            document.getElementById('statExpense').innerText = `￥${totalExpense.toFixed(2)}`;
+            document.getElementById('statBalance').innerText = `￥${(totalIncome - totalExpense).toFixed(2)}`;
+            document.getElementById('statNeutral').innerText = `￥${totalNeutral.toFixed(2)}`;
+
+            // 渲染表格
+            const tbody = document.getElementById('transactionTbody');
+            tbody.innerHTML = '';
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">暂无记账明细数据</td></tr>`;
+            } else {
+                filtered.forEach(t => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-50 transition';
+
+                    let typeBadge = '';
+                    let amountColor = '';
+                    if (t.type === '支出') {
+                        typeBadge = `<span class="bg-rose-50 text-rose-600 px-2 py-0.5 rounded text-xs">支出</span>`;
+                        amountColor = 'text-rose-600';
+                    } else if (t.type === '收入') {
+                        typeBadge = `<span class="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded text-xs">收入</span>`;
+                        amountColor = 'text-emerald-600 font-semibold';
+                    } else {
+                        typeBadge = `<span class="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-xs">不计收支</span>`;
+                        amountColor = 'text-slate-500';
+                    }
+
+                    tr.innerHTML = `
+                        <td class="p-3 text-slate-500 whitespace-nowrap">${t.date}</td>
+                        <td class="p-3 font-medium text-slate-700">${t.desc}</td>
+                        <td class="p-3">${typeBadge}</td>
+                        <td class="p-3"><span class="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-xs">${t.category}</span></td>
+                        <td class="p-3 text-right font-mono ${amountColor}">￥${t.amount.toFixed(2)}</td>
+                        <td class="p-3 text-center">
+                            <button onclick="deleteTransaction('${t.id}')" class="text-slate-400 hover:text-rose-500 transition px-2 py-1">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            renderCharts(filtered);
+        }
+
+        // 图表渲染
+        function renderCharts(data) {
+            // 支出分类统计
             const catMap = {};
-            monthData.forEach(t => {
+            data.filter(t => t.type === '支出').forEach(t => {
                 catMap[t.category] = (catMap[t.category] || 0) + t.amount;
             });
 
-            // 2. 途径汇总
-            const accMap = {};
-            monthData.forEach(t => {
-                accMap[t.account] = (accMap[t.account] || 0) + t.amount;
-            });
+            const catLabels = Object.keys(catMap);
+            const catValues = Object.values(catMap);
 
-            // 渲染饼图 1 (分类)
             if (categoryChartInstance) categoryChartInstance.destroy();
-            const ctxCat = document.getElementById('categoryChart').getContext('2d');
-            categoryChartInstance = new Chart(ctxCat, {
+            const ctx1 = document.getElementById('categoryChart').getContext('2d');
+            categoryChartInstance = new Chart(ctx1, {
                 type: 'doughnut',
                 data: {
-                    labels: Object.keys(catMap).length ? Object.keys(catMap) : ['暂无支出'],
+                    labels: catLabels,
                     datasets: [{
-                        data: Object.values(catMap).length ? Object.values(catMap) : [1],
-                        backgroundColor: ['#8E9AAF', '#CBC0D3', '#EFD3D7', '#FEEAFA', '#DEE2E6', '#A3C4BC']
+                        data: catValues,
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b']
                     }]
                 },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-
-            // 渲染饼图 2 (途径)
-            if (accountChartInstance) accountChartInstance.destroy();
-            const ctxAcc = document.getElementById('accountChart').getContext('2d');
-            accountChartInstance = new Chart(ctxAcc, {
-                type: 'pie',
-                data: {
-                    labels: Object.keys(accMap).length ? Object.keys(accMap) : ['暂无数据'],
-                    datasets: [{
-                        data: Object.values(accMap).length ? Object.values(accMap) : [1],
-                        backgroundColor: ['#A3C4BC', '#8E9AAF', '#F4ACB7', '#D8E2DC', '#FFE5D9']
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-        }
-
-        function populateYearPicker() {
-            const picker = document.getElementById('yearlyPicker');
-            const years = Array.from(new Set(transactions.map(t => t.date.slice(0, 4)))).sort().reverse();
-            const currentYear = new Date().getFullYear().toString();
-            if (!years.includes(currentYear)) years.unshift(currentYear);
-
-            picker.innerHTML = years.map(y => `<option value="${y}">${y} 年</option>`).join('');
-        }
-
-        function renderYearlyView() {
-            const selectedYear = document.getElementById('yearlyPicker').value;
-            const monthlyIncomes = new Array(12).fill(0);
-            const monthlyExpenses = new Array(12).fill(0);
-
-            transactions.forEach(t => {
-                if (t.is_refunded || !t.date.startsWith(selectedYear)) return;
-                const m = parseInt(t.date.slice(5, 7), 10) - 1;
-                if (m >= 0 && m < 12) {
-                    if (t.type === '收入') monthlyIncomes[m] += t.amount;
-                    if (t.type === '支出') monthlyExpenses[m] += t.amount;
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12 } }
+                    }
                 }
             });
 
-            if (yearlyChartInstance) yearlyChartInstance.destroy();
-            const ctxYear = document.getElementById('yearlyTrendChart').getContext('2d');
-            yearlyChartInstance = new Chart(ctxYear, {
-                type: 'bar',
+            // 月度趋势
+            const monthMap = {};
+            data.filter(t => t.type === '支出').forEach(t => {
+                const month = t.date.slice(0, 7);
+                monthMap[month] = (monthMap[month] || 0) + t.amount;
+            });
+
+            const monthLabels = Object.keys(monthMap).sort();
+            const monthValues = monthLabels.map(m => monthMap[m]);
+
+            if (trendChartInstance) trendChartInstance.destroy();
+            const ctx2 = document.getElementById('trendChart').getContext('2d');
+            trendChartInstance = new Chart(ctx2, {
+                type: 'line',
                 data: {
-                    labels: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
-                    datasets: [
-                        { label: '收入', data: monthlyIncomes, backgroundColor: '#A3C4BC' },
-                        { label: '支出', data: monthlyExpenses, backgroundColor: '#F4ACB7' }
-                    ]
+                    labels: monthLabels,
+                    datasets: [{
+                        label: '月度支出 (元)',
+                        data: monthValues,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }]
                 },
-                options: { responsive: true, maintainAspectRatio: false }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
             });
         }
 
-        // ================= JSON 导出与导入 =================
-        function exportJSON() {
+        // 导出备份 JSON
+        function exportBackup() {
+            if (transactions.length === 0) { alert('当前没有可导出的数据'); return; }
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(transactions, null, 2));
-            const dlAnchorElem = document.createElement('a');
-            dlAnchorElem.setAttribute("href", dataStr);
-            dlAnchorElem.setAttribute("download", `静蜜记账备份_${new Date().toISOString().split('T')[0]}.json`);
-            dlAnchorElem.click();
+            const dl = document.createElement('a');
+            dl.setAttribute("href", dataStr);
+            dl.setAttribute("download", `智能记账系统备份_${new Date().toISOString().slice(0,10)}.json`);
+            dl.click();
+            dl.remove();
         }
 
-        function importJSON(e) {
+        // 导入备份 JSON
+        function importBackup(e) {
             const file = e.target.files[0];
             if (!file) return;
+
             const reader = new FileReader();
-            reader.onload = function(event) {
+            reader.onload = function(evt) {
                 try {
-                    const importedData = JSON.parse(event.target.result);
-                    if (Array.isArray(importedData)) {
-                        transactions = importedData;
-                        saveAndRender();
-                        alert('✅ 数据恢复成功！');
-                    }
-                } catch (err) {
-                    alert('❌ 备份文件损坏或格式不符合！');
-                }
+                    const imported = JSON.parse(evt.target.result);
+                    if (Array.isArray(imported)) {
+                        if (confirm(`准备恢复 ${imported.length} 条数据，是否覆盖当前所有记账数据？`)) {
+                            transactions = imported;
+                            saveLocalData();
+                            alert('数据已成功恢复！');
+                        }
+                    } else { alert('备份文件格式有误！'); }
+                } catch (err) { alert('解析 JSON 备份文件失败'); }
             };
             reader.readAsText(file);
+            e.target.value = '';
         }
-
-        // 页面初始渲染
-        saveAndRender();
     </script>
 </body>
 </html>
