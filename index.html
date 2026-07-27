@@ -3,28 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 智能记账系统 Pro - 自动分类 & 批量导入 & 退款关联</title>
-    <!-- Tailwind CSS CDN -->
+    <title>智能记账系统 Pro - 支持批量导入与退款关联</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js 图表库 -->
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Font Awesome 图标库 -->
+    <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- SheetJS (XLSX) 用于解析 Excel/CSV -->
+    <!-- SheetJS (用于 Excel / CSV 批量解析) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- pdf.js 用于提取 PDF 文本 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- PDF.js (用于 PDF 账单文本提取) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     </script>
     <style>
         body {
             background-color: #f8fafc;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        }
-        .drag-active {
-            border-color: #6366f1 !important;
-            background-color: #eef2ff !important;
         }
     </style>
 </head>
@@ -34,28 +30,25 @@
     <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
         <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
             <div class="flex items-center space-x-3">
-                <div class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-md shadow-indigo-100">
-                    <i class="fa-solid fa-wand-magic-sparkles text-xl"></i>
+                <div class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-md">
+                    <i class="fa-solid fa-wallet text-2xl"></i>
                 </div>
                 <div>
-                    <div class="flex items-center space-x-2">
-                        <h1 class="text-xl font-bold text-slate-900">AI 智能记账系统</h1>
-                        <span class="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-semibold">Pro 版</span>
-                    </div>
-                    <p class="text-xs text-slate-500">支持文件智能解析 · 批量自动分类 · 智能退款关联</p>
+                    <h1 class="text-xl font-bold text-slate-900">智能记账系统 Pro</h1>
+                    <p class="text-xs text-slate-500">批量导入 · AI分类 · 退款关联对冲</p>
                 </div>
             </div>
             
-            <!-- 备份与恢复 -->
+            <!-- 备份与恢复按钮区域 -->
             <div class="flex items-center space-x-2">
-                <button onclick="exportJSONBackup()" class="flex items-center space-x-1.5 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg transition border border-slate-300">
+                <button onclick="exportBackup()" class="flex items-center space-x-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg transition border border-slate-300" title="导出数据为 JSON 备份">
                     <i class="fa-solid fa-download"></i>
-                    <span class="hidden sm:inline">导出 JSON 备份</span>
+                    <span class="hidden sm:inline">导出 JSON</span>
                 </button>
-                <label class="flex items-center space-x-1.5 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg transition border border-indigo-200 cursor-pointer">
+                <label class="flex items-center space-x-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg transition border border-slate-300 cursor-pointer" title="导入 JSON 恢复数据">
                     <i class="fa-solid fa-upload"></i>
-                    <span class="hidden sm:inline">导入 JSON 恢复</span>
-                    <input type="file" id="jsonFileInput" accept=".json" class="hidden" onchange="importJSONBackup(event)">
+                    <span class="hidden sm:inline">恢复 JSON</span>
+                    <input type="file" id="importFileInput" accept=".json" class="hidden" onchange="importBackup(event)">
                 </label>
             </div>
         </div>
@@ -63,163 +56,200 @@
 
     <main class="max-w-6xl mx-auto px-4 py-6 space-y-6">
 
-        <!-- 概览卡片 -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- 概览面板卡片 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- 净结余 -->
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                <div class="text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">实际总结余</div>
+                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">净结余</div>
                 <div id="netBalance" class="text-2xl font-bold text-slate-900">¥0.00</div>
             </div>
+            <!-- 总收入 -->
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                <div class="text-xs font-semibold text-emerald-600 mb-1 uppercase tracking-wider">总收入</div>
+                <div class="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-1">总收入</div>
                 <div id="totalIncome" class="text-2xl font-bold text-emerald-600">¥0.00</div>
             </div>
+            <!-- 实际总支出 (已扣除退款) -->
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                <div class="text-xs font-semibold text-rose-500 mb-1 uppercase tracking-wider">总支出 (剔除退款)</div>
+                <div class="text-xs font-semibold text-rose-500 uppercase tracking-wider mb-1">实际总支出 (已减退款)</div>
                 <div id="totalExpense" class="text-2xl font-bold text-rose-500">¥0.00</div>
-                <div id="refundOffsetInfo" class="text-xs text-slate-400 mt-1">已被关联退款冲抵: ¥0.00</div>
             </div>
+            <!-- 累计退款对冲 -->
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                <div class="text-xs font-semibold text-amber-600 mb-1 uppercase tracking-wider">退款与冲抵总额</div>
-                <div id="totalRefunds" class="text-2xl font-bold text-amber-600">¥0.00</div>
-                <div id="unlinkedRefundsCount" class="text-xs text-slate-400 mt-1">待关联退款: 0 笔</div>
+                <div class="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-1">已被关联退款</div>
+                <div id="totalRefund" class="text-2xl font-bold text-amber-600">¥0.00</div>
             </div>
         </div>
 
-        <!-- 批量文件导入 & 智能解析区 -->
-        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 mb-4 border-b border-slate-100 gap-2">
-                <div>
-                    <h2 class="text-lg font-bold text-slate-900 flex items-center">
-                        <i class="fa-solid fa-file-import text-indigo-600 mr-2"></i>智能文件批量导入 (Excel / CSV / PDF)
-                    </h2>
-                    <p class="text-xs text-slate-500 mt-0.5">支持微信/支付宝等账单导出文件，系统自动解析金额、日期、明细并智能智能划分分类</p>
+        <!-- [新增模块] 投资理财流动资产独立看板 -->
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-piggy-bank text-blue-600 text-lg"></i>
+                    <h2 class="text-base font-bold text-slate-800">投资理财资产流动 (独立不计入日常收支)</h2>
                 </div>
-                <button onclick="downloadSampleCSV()" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center">
-                    <i class="fa-solid fa-file-csv mr-1"></i>下载示例 CSV 模版
+                <span id="investCount" class="text-xs bg-blue-100 text-blue-700 font-medium px-2.5 py-0.5 rounded-full">0 笔记录</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="bg-white/80 backdrop-blur-sm p-3.5 rounded-xl border border-blue-100 flex justify-between items-center">
+                    <span class="text-xs font-medium text-slate-500">理财买入 / 转入总额</span>
+                    <span id="investIn" class="text-sm font-bold text-blue-600">¥0.00</span>
+                </div>
+                <div class="bg-white/80 backdrop-blur-sm p-3.5 rounded-xl border border-blue-100 flex justify-between items-center">
+                    <span class="text-xs font-medium text-slate-500">理财赎回 / 转出总额</span>
+                    <span id="investOut" class="text-sm font-bold text-emerald-600">¥0.00</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 文件批量导入与退款关联区 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- 批量上传区 -->
+            <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-base font-bold text-slate-900 flex items-center">
+                            <i class="fa-solid fa-file-import text-indigo-600 mr-2"></i>批量导入账单 (Excel / CSV / PDF)
+                        </h2>
+                        <span class="text-xs text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full font-medium">智能自动分类</span>
+                    </div>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        支持拖拽或选择微信/支付宝/银行卡导出的 <b>.xlsx</b>、<b>.csv</b> 或 <b>.pdf</b> 电子账单文件。系统将自动解析精准时间、金额、商户及类别。
+                    </p>
+                    
+                    <!-- 拖拽上传框 -->
+                    <label class="border-2 border-dashed border-indigo-200 hover:border-indigo-500 bg-indigo-50/40 hover:bg-indigo-50 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition text-center group">
+                        <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
+                        </div>
+                        <span class="text-sm font-semibold text-slate-700">点击选择文件 或 将文件拖放到此处</span>
+                        <span class="text-xs text-slate-400 mt-1">支持 .xlsx, .xls, .csv, .pdf 文件</span>
+                        <input type="file" id="batchFileInput" accept=".xlsx,.xls,.csv,.pdf" class="hidden" onchange="handleBatchFileUpload(event)">
+                    </label>
+                </div>
+
+                <div id="uploadStatus" class="mt-3 text-xs text-indigo-600 hidden font-medium flex items-center">
+                    <i class="fa-solid fa-circle-notch fa-spin mr-1.5"></i> 正在智能读取解析文件中，请稍候...
+                </div>
+            </div>
+
+            <!-- 退款/对冲关联助手 -->
+            <div class="lg:col-span-1 bg-gradient-to-br from-amber-50 to-orange-50/50 p-6 rounded-2xl border border-amber-200/80 shadow-sm flex flex-col justify-between">
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-base font-bold text-amber-900 flex items-center">
+                            <i class="fa-solid fa-link text-amber-600 mr-2"></i>退款对冲智能助手
+                        </h2>
+                    </div>
+                    <p class="text-xs text-amber-800/80 leading-relaxed">
+                        快速检测账单中的“退款”记录，并一键关联原消费记录，自动在统计中抵扣退款金额，避免重复计算支出。
+                    </p>
+                    
+                    <div id="refundDetectionBox" class="bg-white/80 backdrop-blur-sm p-3 rounded-xl border border-amber-200 text-xs text-slate-600 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium text-amber-900">待关联退款建议：</span>
+                            <span id="suggestedRefundCount" class="font-bold text-amber-600">0 笔</span>
+                        </div>
+                        <p id="refundSuggestionText" class="text-slate-500 text-[11px]">暂未检测到匹配的未关联退款项。</p>
+                    </div>
+                </div>
+
+                <button onclick="autoMatchRefunds()" class="w-full mt-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-medium text-xs rounded-xl shadow transition flex items-center justify-center space-x-1">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>一键全自动关联退款</span>
                 </button>
             </div>
 
-            <div id="dropZone" class="border-2 border-dashed border-slate-300 hover:border-indigo-400 rounded-xl p-8 text-center bg-slate-50 hover:bg-slate-50/80 transition cursor-pointer relative"
-                 onclick="document.getElementById('batchFileInput').click()"
-                 ondragover="handleDragOver(event)"
-                 ondragleave="handleDragLeave(event)"
-                 ondrop="handleFileDrop(event)">
-                
-                <input type="file" id="batchFileInput" accept=".xlsx, .xls, .csv, .pdf" class="hidden" onchange="handleBatchFileSelect(event)">
-                
-                <div class="space-y-3">
-                    <div class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto text-2xl">
-                        <i class="fa-solid fa-cloud-arrow-up"></i>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold text-slate-700">点击上传 或 将账单文件拖拽至此处</p>
-                        <p class="text-xs text-slate-400 mt-1">支持格式：.xlsx, .xls, .csv, .pdf 账单（支付宝/微信账单文件均可直接导入）</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 文件解析状态提示 -->
-            <div id="parseStatus" class="hidden mt-4 p-3 rounded-lg text-xs font-medium"></div>
         </div>
 
+        <!-- 记账表单 + 图表 + 明细 -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            <!-- 左侧：手动输入表单 + 退款关联管理 -->
-            <div class="lg:col-span-1 space-y-6">
-                <!-- 手动记账 -->
-                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                    <h2 class="text-base font-bold text-slate-900 mb-4 flex items-center">
-                        <i class="fa-solid fa-pen-to-square text-indigo-600 mr-2"></i>手动记一笔
-                    </h2>
-                    <form id="transactionForm" onsubmit="handleAddSingle(event)" class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1">交易类型</label>
-                            <div class="grid grid-cols-3 gap-2">
-                                <button type="button" id="btnExpense" onclick="setType('expense')" class="py-1.5 text-xs font-medium rounded-lg border border-rose-500 bg-rose-500 text-white transition">支出</button>
-                                <button type="button" id="btnIncome" onclick="setType('income')" class="py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition">收入</button>
-                                <button type="button" id="btnRefund" onclick="setType('refund')" class="py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition">退款/冲抵</button>
-                            </div>
+            <!-- 左侧：单笔手动记账 -->
+            <div class="lg:col-span-1 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-fit space-y-4">
+                <h2 class="text-base font-bold text-slate-900 flex items-center">
+                    <i class="fa-solid fa-pen-to-square text-indigo-600 mr-2"></i>手动新增交易
+                </h2>
+                <form id="transactionForm" onsubmit="handleAddTransaction(event)" class="space-y-3.5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">交易类型</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" id="btnExpense" onclick="setType('expense')" class="py-2 text-xs font-medium rounded-lg border border-rose-500 bg-rose-500 text-white transition">支出</button>
+                            <button type="button" id="btnIncome" onclick="setType('income')" class="py-2 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition">收入 / 退款</button>
                         </div>
-
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1">金额 (元)</label>
-                            <input type="number" step="0.01" id="amount" required placeholder="0.00" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        </div>
-
-                        <div>
-                            <div class="flex justify-between items-center mb-1">
-                                <label class="block text-xs font-semibold text-slate-500">用途分类</label>
-                                <span class="text-[10px] text-indigo-600 cursor-pointer" onclick="autoSuggestCategory()">智能推荐</span>
-                            </div>
-                            <select id="category" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                                <option value="餐饮美食">🍔 餐饮美食</option>
-                                <option value="交通出行">🚗 交通出行</option>
-                                <option value="购物消费">🛍️ 购物消费</option>
-                                <option value="日常娱乐">🎮 日常娱乐</option>
-                                <option value="居家物业">🏠 居家物业</option>
-                                <option value="医疗健康">🏥 医疗健康</option>
-                                <option value="职业工资">💰 职业工资</option>
-                                <option value="退款冲抵">↩️ 退款冲抵</option>
-                                <option value="其他">📦 其他</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1">交易日期</label>
-                            <input type="date" id="date" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1">描述 / 商户全称</label>
-                            <input type="text" id="description" placeholder="例如：美团外卖、退货返款..." oninput="autoSuggestCategory()" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        </div>
-
-                        <button type="submit" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm shadow transition">
-                            保存记录
-                        </button>
-                    </form>
-                </div>
-
-                <!-- 智能退款匹配辅助区 -->
-                <div class="bg-amber-50/60 border border-amber-200/80 p-5 rounded-2xl">
-                    <div class="flex items-center space-x-2 mb-2 text-amber-800">
-                        <i class="fa-solid fa-link"></i>
-                        <h3 class="font-bold text-sm">智能退款/冲抵关联说明</h3>
                     </div>
-                    <p class="text-xs text-amber-700 leading-relaxed">
-                        上传或录入类型为<b>“退款/冲抵”</b>的账单后，点击列表中该笔退款右侧的 <i class="fa-solid fa-link text-indigo-600"></i> 按钮，即可将退款与原支出关联。关联后系统将<b>自动从原支出中扣减退款金额</b>，保持报表精确无误。
-                    </p>
-                </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">金额 (元)</label>
+                        <input type="number" step="0.01" id="amount" required placeholder="0.00" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">用途分类</label>
+                        <select id="category" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="餐饮美食">🍔 餐饮美食</option>
+                            <option value="交通出行">🚗 交通出行</option>
+                            <option value="购物消费">🛍️ 购物消费</option>
+                            <option value="日常娱乐">🎮 日常娱乐</option>
+                            <option value="居家物业">🏠 居家物业</option>
+                            <option value="医疗健康">🏥 医疗健康</option>
+                            <option value="职业工资">💰 职业工资</option>
+                            <option value="兼职副业">📈 兼职副业</option>
+                            <option value="投资理财">📈 投资理财</option>
+                            <option value="其他">📦 其他</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">交易日期</label>
+                        <input type="date" id="date" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">备注说明 / 商户</label>
+                        <input type="text" id="description" placeholder="例如：买咖啡、淘宝退款..." class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+
+                    <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-lg shadow transition">
+                        保存单笔记录
+                    </button>
+                </form>
             </div>
 
-            <!-- 右侧：分类图表与收支交易列表 -->
+            <!-- 右侧：图表统计与账单明细列表 -->
             <div class="lg:col-span-2 space-y-6">
-                <!-- 支出图表 -->
+                <!-- 支出分类统计图表 -->
                 <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                    <h2 class="text-base font-bold text-slate-900 mb-4 flex items-center">
-                        <i class="fa-solid fa-chart-pie text-indigo-600 mr-2"></i>支出分类占比 (净支出)
-                    </h2>
-                    <div class="h-48 relative flex justify-center">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-base font-bold text-slate-900 flex items-center">
+                            <i class="fa-solid fa-chart-pie text-indigo-600 mr-2"></i>支出分类占比 (可点击切块联动筛选)
+                        </h2>
+                        <span id="chartTip" class="text-xs text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded">点击图表项筛选明细</span>
+                    </div>
+                    <div class="h-48 relative flex justify-center items-center">
                         <canvas id="categoryChart"></canvas>
                     </div>
                 </div>
 
-                <!-- 交易明细列表 -->
+                <!-- 明细列表 -->
                 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <div class="p-4 border-b border-slate-100 flex justify-between items-center flex-wrap gap-2">
                         <div class="flex items-center space-x-2">
                             <h2 class="text-base font-bold text-slate-900 flex items-center">
-                                <i class="fa-solid fa-receipt text-indigo-600 mr-2"></i>收支明细列表
+                                <i class="fa-solid fa-list-check text-indigo-600 mr-2"></i>收支明细列表
                             </h2>
-                            <span id="recordCount" class="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-medium">共 0 笔</span>
+                            <span id="filterBadge" class="hidden text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                                <span id="filterCategoryName">分类</span>
+                                <i class="fa-solid fa-xmark cursor-pointer hover:text-indigo-900" onclick="clearCategoryFilter()" title="清除筛选"></i>
+                            </span>
                         </div>
-                        <button onclick="clearAllData()" class="text-xs text-rose-500 hover:text-rose-700 flex items-center">
-                            <i class="fa-solid fa-trash-can mr-1"></i>清空全部数据
-                        </button>
+                        <div class="flex items-center space-x-2">
+                            <span id="recordCount" class="text-xs text-slate-500">共 0 笔</span>
+                            <button onclick="clearAllData()" class="text-xs text-rose-500 hover:underline">清空数据</button>
+                        </div>
                     </div>
 
-                    <!-- 列表容器 -->
-                    <div id="transactionList" class="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
+                    <!-- 交易列表 Container -->
+                    <div id="transactionList" class="divide-y divide-slate-100 max-h-[480px] overflow-y-auto">
                         <!-- JS 动态渲染 -->
                     </div>
                 </div>
@@ -227,66 +257,51 @@
         </div>
     </main>
 
-    <!-- 退款关联选择弹窗 -->
-    <div id="linkModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h3 class="font-bold text-slate-900 text-base flex items-center">
-                    <i class="fa-solid fa-link text-indigo-600 mr-2"></i>选择对应的原支出笔数
-                </h3>
-                <button onclick="closeLinkModal()" class="text-slate-400 hover:text-slate-600 text-lg">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            
-            <div id="modalRefundInfo" class="bg-amber-50 p-3 rounded-xl text-xs text-amber-900 border border-amber-200/60">
-                <!-- 动态填入当前退款信息 -->
-            </div>
-
-            <p class="text-xs text-slate-500">提示：以下为潜在匹配的支出记录，点击“确认关联”将把退款绑定至该笔支出。</p>
-
-            <div id="candidateList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
-                <!-- 动态填充可关联的支出列表 -->
-            </div>
-
-            <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100">
-                <button onclick="closeLinkModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition">取消</button>
-            </div>
-        </div>
-    </div>
-
     <script>
-        // 全局数据状态
+        // 全局状态
         let transactions = [];
         let currentType = 'expense';
         let chartInstance = null;
-        let activeRefundIdForLinking = null;
+        let activeCategoryFilter = null; // 当前选中的图表筛选分类
 
-        // 分类关键词智能规则表
+        // 核心：智能分类关键词词库规则
         const CATEGORY_RULES = {
-            '餐饮美食': ['美团', '饿了么', '肯德基', '麦当劳', '星巴克', '瑞幸', '餐饮', '饭店', '小吃', '食堂', '咖啡', '菜场', '超市', '零食'],
-            '交通出行': ['滴滴', '打车', '高德', '地铁', '公交', '铁路', '12306', '机票', '加油', '停车', '携程'],
-            '购物消费': ['淘宝', '天猫', '京东', '拼多多', '唯品会', '服装', '鞋', '数码', 'Apple', '优衣库', '商场'],
-            '日常娱乐': ['网易云', '腾讯视频', '爱奇艺', '电影', '游戏', '蒸汽', 'Steam', '充值', '酒吧', 'KTV'],
-            '居家物业': ['电费', '水费', '燃气', '宽带', '房租', '物业', '家居', '宜家'],
-            '医疗健康': ['医院', '药店', '诊所', '体检', '大药房', '医疗'],
-            '职业工资': ['工资', '薪水', '奖金', '劳务', '代发'],
-            '退款冲抵': ['退款', '退货', '冲抵', '退款成功']
+            '餐饮美食': ['美团', '饿了么', '麦当劳', '肯德基', '星巴克', '瑞幸', '餐饮', '饭店', '小吃', '外卖', '超市', '便利店', '菜市场', '咖啡', '酒楼', '烧烤'],
+            '交通出行': ['滴滴', '打车', '地铁', '公交', '加油', '停车', '高铁', '火车', '机票', '12306', '共享单车', '哈啰', '美团单车', '顺风车'],
+            '购物消费': ['淘宝', '天猫', '京东', '拼多多', '唯品会', '服装', '鞋包', '数码', '苹果', '小米', '商场', '优衣库', '屈臣氏'],
+            '日常娱乐': ['电影', '腾讯视频', '爱奇艺', '网易云', '游戏', '蒸汽', 'Steam', 'Bilibili', '网吧', 'KTV', '演唱会', '景区'],
+            '居家物业': ['电费', '水费', '燃气', '宽带', '物业', '房租', '家居', '宜家', '维修'],
+            '医疗健康': ['医院', '药店', '大药房', '诊所', '体检', '医疗', '口罩'],
+            '职业工资': ['工资', '代发', '薪资', '奖金', '报销', '劳务费'],
+            '兼职副业': ['兼职', '稿费', '收益', '红利'],
+            '投资理财': ['理财', '基金', '股票', '证券', '支付宝-余额宝', '余利宝', '定期', '投资']
         };
 
-        // 页面初始化
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('date').valueAsDate = new Date();
             loadLocalData();
         });
 
-        // 智能自动推荐分类
-        function predictCategory(desc) {
-            if (!desc) return '其他';
-            const text = desc.toLowerCase();
+        function setType(type) {
+            currentType = type;
+            const btnExpense = document.getElementById('btnExpense');
+            const btnIncome = document.getElementById('btnIncome');
+
+            if (type === 'expense') {
+                btnExpense.className = "py-2 text-xs font-medium rounded-lg border border-rose-500 bg-rose-500 text-white transition";
+                btnIncome.className = "py-2 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition";
+            } else {
+                btnIncome.className = "py-2 text-xs font-medium rounded-lg border border-emerald-500 bg-emerald-500 text-white transition";
+                btnExpense.className = "py-2 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition";
+            }
+        }
+
+        // 智能自动判断分类
+        function autoPredictCategory(desc, remark = '') {
+            const combined = (desc + ' ' + remark).toLowerCase();
             for (const [cat, keywords] of Object.entries(CATEGORY_RULES)) {
                 for (const kw of keywords) {
-                    if (text.includes(kw.toLowerCase())) {
+                    if (combined.includes(kw.toLowerCase())) {
                         return cat;
                     }
                 }
@@ -294,171 +309,77 @@
             return '其他';
         }
 
-        // 输入框变化时自动推荐分类
-        function autoSuggestCategory() {
-            const desc = document.getElementById('description').value;
-            if (desc) {
-                const predicted = predictCategory(desc);
-                if (predicted !== '其他') {
-                    document.getElementById('category').value = predicted;
-                }
-            }
-        }
-
-        // 类型切换
-        function setType(type) {
-            currentType = type;
-            const btnExpense = document.getElementById('btnExpense');
-            const btnIncome = document.getElementById('btnIncome');
-            const btnRefund = document.getElementById('btnRefund');
-
-            btnExpense.className = "py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition";
-            btnIncome.className = "py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition";
-            btnRefund.className = "py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition";
-
-            if (type === 'expense') {
-                btnExpense.className = "py-1.5 text-xs font-medium rounded-lg border border-rose-500 bg-rose-500 text-white transition";
-            } else if (type === 'income') {
-                btnIncome.className = "py-1.5 text-xs font-medium rounded-lg border border-emerald-500 bg-emerald-500 text-white transition";
-            } else if (type === 'refund') {
-                btnRefund.className = "py-1.5 text-xs font-medium rounded-lg border border-amber-500 bg-amber-500 text-white transition";
-                document.getElementById('category').value = '退款冲抵';
-            }
-        }
-
-        // 本地存储加载
+        // LocalStorage 管理
         function loadLocalData() {
-            const saved = localStorage.getItem('smart_accounting_data_v2');
+            const saved = localStorage.getItem('smart_accounting_pro_data');
             if (saved) {
-                try {
-                    transactions = JSON.parse(saved);
-                } catch (e) {
-                    transactions = [];
-                }
+                try { transactions = JSON.parse(saved); } catch (e) { transactions = []; }
+            } else {
+                transactions = [];
             }
-            autoMatchRefunds(); // 自动尝试关联未绑定的退款
             renderAll();
         }
 
         function saveLocalData() {
-            localStorage.setItem('smart_accounting_data_v2', JSON.stringify(transactions));
+            localStorage.setItem('smart_accounting_pro_data', JSON.stringify(transactions));
             renderAll();
         }
 
-        // 单条记录保存
-        function handleAddSingle(e) {
-            e.preventDefault();
-            const amount = parseFloat(document.getElementById('amount').value);
-            const category = document.getElementById('category').value;
-            const date = document.getElementById('date').value;
-            const description = document.getElementById('description').value || category;
-
-            if (!amount || amount <= 0) {
-                alert("请输入正确的交易金额");
-                return;
-            }
-
-            const item = {
-                id: 'tx_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-                type: currentType, // 'expense', 'income', 'refund'
-                amount: amount,
-                category: category,
-                date: date,
-                description: description,
-                linkedExpenseId: null // 用于退款关联
-            };
-
-            transactions.unshift(item);
-            autoMatchRefunds();
-            saveLocalData();
-
-            document.getElementById('amount').value = '';
-            document.getElementById('description').value = '';
+        // 判断是否为投资理财账单 (说明=不计收支 且 分类=投资理财)
+        function isInvestmentRecord(item) {
+            const isNoStat = item.remark && item.remark.includes('不计收支');
+            const isInvestCat = item.category === '投资理财' || item.description.includes('余利宝') || item.description.includes('理财');
+            return isNoStat && isInvestCat;
         }
 
-        // 自动智能退款关联算法
-        function autoMatchRefunds() {
-            const refunds = transactions.filter(t => t.type === 'refund' && !t.linkedExpenseId);
-            const expenses = transactions.filter(t => t.type === 'expense');
-
-            refunds.forEach(ref => {
-                // 查找金额一致或商户相似的支出
-                const match = expenses.find(exp => {
-                    const sameAmount = Math.abs(exp.amount - ref.amount) < 0.01;
-                    const nameMatch = (exp.description && ref.description && 
-                                     (exp.description.includes(ref.description) || ref.description.includes(exp.description)));
-                    return (sameAmount || nameMatch) && exp.date <= ref.date;
-                });
-
-                if (match) {
-                    ref.linkedExpenseId = match.id;
-                }
-            });
+        // 校验/识别是否是退款记录 (说明包含“不计收支”且非理财，或者含有“退款”)
+        function isRefundRecord(item) {
+            if (isInvestmentRecord(item)) return false;
+            const isNoStat = item.remark && item.remark.includes('不计收支');
+            return (item.type === 'income' && (item.description.includes('退款') || item.category === '退款' || item.isRefund)) || isNoStat;
         }
 
-        // 拖拽上传文件处理
-        function handleDragOver(e) {
-            e.preventDefault();
-            document.getElementById('dropZone').classList.add('drag-active');
-        }
+        // 批量文件上传入口 (支持 Excel / CSV / PDF)
+        async function handleBatchFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
 
-        function handleDragLeave(e) {
-            e.preventDefault();
-            document.getElementById('dropZone').classList.remove('drag-active');
-        }
-
-        function handleFileDrop(e) {
-            e.preventDefault();
-            document.getElementById('dropZone').classList.remove('drag-active');
-            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                processFile(e.dataTransfer.files[0]);
-            }
-        }
-
-        function handleBatchFileSelect(e) {
-            if (e.target.files && e.target.files.length > 0) {
-                processFile(e.target.files[0]);
-            }
-        }
-
-        // 智能解析上传文件 (Excel / CSV / PDF)
-        async function processFile(file) {
-            const statusEl = document.getElementById('parseStatus');
-            statusEl.className = "mt-4 p-3 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-700 block";
-            statusEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>正在解析文件 "${file.name}" 中...`;
+            const statusEl = document.getElementById('uploadStatus');
+            statusEl.classList.remove('hidden');
 
             try {
                 const fileName = file.name.toLowerCase();
-                let parsedItems = [];
+                let newItems = [];
 
                 if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')) {
-                    parsedItems = await parseExcelOrCSV(file);
+                    newItems = await parseExcelOrCSV(file);
                 } else if (fileName.endsWith('.pdf')) {
-                    parsedItems = await parsePDF(file);
+                    newItems = await parsePDF(file);
                 } else {
-                    throw new Error("不支持的文件格式，请上传 Excel, CSV 或 PDF 文件。");
+                    alert('不受支持的文件格式');
                 }
 
-                if (parsedItems.length === 0) {
-                    throw new Error("未能从文件中解析出符合格式的收支明细记录。");
+                if (newItems.length > 0) {
+                    transactions = [...newItems, ...transactions];
+                    
+                    // 自动关联已知退款
+                    autoMatchRefunds(false);
+
+                    saveLocalData();
+                    alert(`成功解析并批量导入 ${newItems.length} 笔交易数据！`);
+                } else {
+                    alert('未能解析到有效的交易记录，请确保文件格式符合微信/支付宝/银行卡导出规范。');
                 }
-
-                // 批量加入列表
-                transactions = [...parsedItems, ...transactions];
-                autoMatchRefunds();
-                saveLocalData();
-
-                statusEl.className = "mt-4 p-3 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 block";
-                statusEl.innerHTML = `<i class="fa-solid fa-circle-check mr-2"></i>成功导入并智能分类了 <b>${parsedItems.length}</b> 笔账单记录！`;
-
             } catch (err) {
-                statusEl.className = "mt-4 p-3 rounded-lg text-xs font-medium bg-rose-50 text-rose-700 block";
-                statusEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-2"></i>导入失败: ${err.message}`;
+                console.error(err);
+                alert('解析文件出错，请重试或检查文件损坏情况。');
+            } finally {
+                statusEl.classList.add('hidden');
+                event.target.value = '';
             }
-            document.getElementById('batchFileInput').value = '';
         }
 
-        // 解析 Excel 和 CSV
+        // 解析 Excel 和 CSV (增强支付宝真实日期提取逻辑)
         function parseExcelOrCSV(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -466,188 +387,361 @@
                     try {
                         const data = new Uint8Array(e.target.result);
                         const workbook = XLSX.read(data, { type: 'array' });
-                        const firstSheetName = workbook.SheetNames[0];
-                        const sheet = workbook.Sheets[firstSheetName];
-                        const jsonRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
 
-                        const items = extractTransactionsFromRows(jsonRows);
+                        const items = [];
+                        let dateIdx = -1, amountIdx = -1, descIdx = -1, typeIdx = -1, categoryIdx = -1, remarkIdx = -1;
+
+                        // 定位表头索引
+                        for (let i = 0; i < Math.min(30, rows.length); i++) {
+                            const row = rows[i].map(c => String(c || '').trim());
+                            row.forEach((cell, idx) => {
+                                if (cell.includes('交易创建时间') || cell.includes('付款时间') || cell.includes('时间') || cell.includes('日期')) {
+                                    if (dateIdx === -1 || cell.includes('创建') || cell.includes('付款')) dateIdx = idx;
+                                }
+                                if (cell.includes('金额')) amountIdx = idx;
+                                if (cell.includes('商品名称') || cell.includes('备注') || cell.includes('交易对方')) descIdx = idx;
+                                if (cell.includes('收/支') || cell.includes('资金明细')) typeIdx = idx;
+                                if (cell.includes('分类') || cell.includes('交易分类')) categoryIdx = idx;
+                                if (cell.includes('说明') || cell.includes('备注说明')) remarkIdx = idx;
+                            });
+                            if (dateIdx !== -1 && amountIdx !== -1) break;
+                        }
+
+                        if (dateIdx === -1) dateIdx = 0;
+                        if (amountIdx === -1) amountIdx = 1;
+                        if (descIdx === -1) descIdx = 2;
+
+                        for (let i = 0; i < rows.length; i++) {
+                            const row = rows[i];
+                            if (!row || row.length < 2) continue;
+
+                            const rawDateStr = String(row[dateIdx] || '').trim();
+                            const rawAmountStr = String(row[amountIdx] || '').replace('¥', '').replace(',', '').trim();
+                            const rawAmount = parseFloat(rawAmountStr);
+                            const rawDesc = String(row[descIdx] || '账单消费').trim();
+                            const rawTypeStr = typeIdx !== -1 ? String(row[typeIdx] || '') : '';
+                            const rawCategoryStr = categoryIdx !== -1 ? String(row[categoryIdx] || '').trim() : '';
+                            const rawRemarkStr = remarkIdx !== -1 ? String(row[remarkIdx] || '').trim() : '';
+
+                            // 1. 【日期捕获修复】：从字符串中精准抓取 YYYY-MM-DD 或 YYYY/MM/DD
+                            const dateMatch = rawDateStr.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+
+                            if (!isNaN(rawAmount) && rawAmount > 0 && dateMatch) {
+                                // 提取标准的 YYYY-MM-DD
+                                const year = dateMatch[1];
+                                const month = dateMatch[2].padStart(2, '0');
+                                const day = dateMatch[3].padStart(2, '0');
+                                const dateFormatted = `${year}-${month}-${day}`;
+
+                                let type = 'expense';
+                                if (rawTypeStr.includes('收入') || rawDesc.includes('退款') || rawDesc.includes('工资') || rawRemarkStr.includes('不计收支')) {
+                                    type = 'income';
+                                }
+
+                                // 智能提取/分类
+                                let category = rawCategoryStr || autoPredictCategory(rawDesc, rawRemarkStr);
+
+                                items.push({
+                                    id: 'imp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                                    type: type,
+                                    amount: Math.abs(rawAmount),
+                                    category: category,
+                                    date: dateFormatted,
+                                    description: rawDesc,
+                                    remark: rawRemarkStr,
+                                    linkedRefundId: null
+                                });
+                            }
+                        }
                         resolve(items);
-                    } catch (err) {
-                        reject(err);
-                    }
+                    } catch (err) { reject(err); }
                 };
-                reader.onerror = () => reject(new Error("文件读取失败"));
                 reader.readAsArrayBuffer(file);
             });
         }
 
-        // 通用表格行提取算法（自动识别微信/支付宝/自定义Excel列）
-        function extractTransactionsFromRows(rows) {
-            const items = [];
-            if (!rows || rows.length === 0) return items;
-
-            // 寻找标题表头所在行
-            let headerIdx = -1;
-            let colMap = { date: -1, amount: -1, desc: -1, type: -1, category: -1 };
-
-            for (let i = 0; i < Math.min(rows.length, 30); i++) {
-                const rowStr = (rows[i] || []).join(' ');
-                if (rowStr.includes('金额') || rowStr.includes('交易时间') || rowStr.includes('收/支') || rowStr.includes('商品')) {
-                    headerIdx = i;
-                    const row = rows[i].map(c => String(c).trim());
-                    row.forEach((cell, idx) => {
-                        if (cell.includes('时间') || cell.includes('日期')) colMap.date = idx;
-                        if (cell.includes('金额')) colMap.amount = idx;
-                        if (cell.includes('商品') || cell.includes('说明') || cell.includes('交易对方') || cell.includes('备注')) colMap.desc = idx;
-                        if (cell.includes('收/支') || cell.includes('收/支出') || cell.includes('资金明细')) colMap.type = idx;
-                        if (cell.includes('分类') || cell.includes('类型')) colMap.category = idx;
-                    });
-                    break;
-                }
-            }
-
-            // 如果没有找到明确表头，使用智能回退索引算法
-            if (headerIdx === -1) {
-                headerIdx = 0;
-                colMap = { date: 0, desc: 1, amount: 2, type: 3, category: -1 };
-            }
-
-            for (let i = headerIdx + 1; i < rows.length; i++) {
-                const row = rows[i];
-                if (!row || row.length === 0) continue;
-
-                let rawDate = colMap.date !== -1 ? row[colMap.date] : row[0];
-                let rawAmount = colMap.amount !== -1 ? row[colMap.amount] : row[1];
-                let rawDesc = colMap.desc !== -1 ? row[colMap.desc] : row[2];
-                let rawTypeStr = colMap.type !== -1 ? String(row[colMap.type] || '') : '';
-
-                if (!rawAmount) continue;
-
-                // 清理金额
-                let amountNum = parseFloat(String(rawAmount).replace(/[¥,￥\s]/g, ''));
-                if (isNaN(amountNum) || amountNum === 0) continue;
-
-                // 清理日期 (格式化为 YYYY-MM-DD)
-                let dateStr = new Date().toISOString().slice(0, 10);
-                if (rawDate) {
-                    let match = String(rawDate).match(/\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}/);
-                    if (match) {
-                        dateStr = match[0].replace(/\//g, '-');
-                    }
-                }
-
-                // 判断交易类型 (支出/收入/退款)
-                let type = 'expense';
-                let descStr = String(rawDesc || '日常消费').trim();
-
-                if (rawTypeStr.includes('收入') || descStr.includes('收入') || descStr.includes('退款成功')) {
-                    type = descStr.includes('退款') ? 'refund' : 'income';
-                } else if (descStr.includes('退款') || descStr.includes('退货')) {
-                    type = 'refund';
-                } else if (amountNum < 0) {
-                    type = 'expense';
-                    amountNum = Math.abs(amountNum);
-                }
-
-                // 智能决定分类
-                let category = '其他';
-                if (colMap.category !== -1 && row[colMap.category]) {
-                    category = String(row[colMap.category]).trim();
-                } else {
-                    category = predictCategory(descStr);
-                }
-
-                items.push({
-                    id: 'tx_batch_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                    type: type,
-                    amount: Math.abs(amountNum),
-                    category: type === 'refund' ? '退款冲抵' : category,
-                    date: dateStr,
-                    description: descStr,
-                    linkedExpenseId: null
-                });
-            }
-
-            return items;
-        }
-
-        // 解析 PDF 账单文本
+        // 解析 PDF 文件中的文本提取明细
         async function parsePDF(file) {
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            let fullText = "";
+            let fullText = '';
 
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
                 const textContent = await page.getTextContent();
                 const pageText = textContent.items.map(item => item.str).join(' ');
-                fullText += pageText + "\n";
+                fullText += pageText + '\n';
             }
 
-            // 正则匹配 PDF 中的交易记录（如：2026-07-20 美团外卖 25.50）
             const items = [];
-            const lines = fullText.split('\n');
-            
-            const recordRegex = /(\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2})[\s\S]*?([^\d\n]+?)\s+([¥￥]?\d+\.\d{2})/;
+            const regex = /(\d{4}[-\/]\d{2}[-\/]\d{2})\s+([^\d]+?)\s+([+\-]?\d+\.\d{2})/g;
+            let match;
 
-            for (let line of lines) {
-                const match = line.match(recordRegex);
-                if (match) {
-                    const dateStr = match[1].replace(/\//g, '-');
-                    const descStr = match[2].trim();
-                    const amountNum = parseFloat(match[3].replace(/[¥￥]/g, ''));
+            while ((match = regex.exec(fullText)) !== null) {
+                const date = match[1].replace(/\//g, '-');
+                const desc = match[2].trim();
+                const amount = Math.abs(parseFloat(match[3]));
+                const isIncome = match[0].includes('+') || desc.includes('退款') || desc.includes('收入');
 
-                    if (!isNaN(amountNum)) {
-                        let type = 'expense';
-                        if (descStr.includes('退款')) type = 'refund';
-                        else if (descStr.includes('工资') || descStr.includes('转账')) type = 'income';
-
-                        items.push({
-                            id: 'tx_pdf_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                            type: type,
-                            amount: amountNum,
-                            category: type === 'refund' ? '退款冲抵' : predictCategory(descStr),
-                            date: dateStr,
-                            description: descStr,
-                            linkedExpenseId: null
-                        });
-                    }
-                }
+                items.push({
+                    id: 'pdf_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    type: isIncome ? 'income' : 'expense',
+                    amount: amount,
+                    category: autoPredictCategory(desc),
+                    date: date,
+                    description: desc,
+                    remark: '',
+                    linkedRefundId: null
+                });
             }
-
             return items;
         }
 
-        // 手动选择并建立退款与支出的关联
-        function openLinkModal(refundId) {
-            activeRefundIdForLinking = refundId;
-            const refundItem = transactions.find(t => t.id === refundId);
-            if (!refundItem) return;
+        // 手动添加单笔记录
+        function handleAddTransaction(e) {
+            e.preventDefault();
+            const amount = parseFloat(document.getElementById('amount').value);
+            const category = document.getElementById('category').value;
+            const date = document.getElementById('date').value;
+            const description = document.getElementById('description').value || category;
 
-            document.getElementById('modalRefundInfo').innerHTML = `
-                <div><b>退款笔数：</b>${refundItem.description} (${refundItem.date})</div>
-                <div class="text-rose-600 font-bold text-sm">退款金额：¥${refundItem.amount.toFixed(2)}</div>
-            `;
+            if (!amount || amount <= 0) {
+                alert('请输入有效金额');
+                return;
+            }
 
-            // 过滤可以关联的支出记录
-            const candidateExpenses = transactions.filter(t => t.type === 'expense');
-            const candidateContainer = document.getElementById('candidateList');
+            const newItem = {
+                id: 'tx_' + Date.now(),
+                type: currentType,
+                amount: amount,
+                category: category,
+                date: date,
+                description: description,
+                remark: '',
+                linkedRefundId: null
+            };
 
-            if (candidateExpenses.length === 0) {
-                candidateContainer.innerHTML = `<div class="p-4 text-center text-slate-400 text-xs">没有可关联的支出记录</div>`;
+            transactions.unshift(newItem);
+            saveLocalData();
+
+            document.getElementById('amount').value = '';
+            document.getElementById('description').value = '';
+        }
+
+        // 手动进行关联/取消关联对冲
+        function toggleLinkRefund(expenseId, refundId) {
+            const exp = transactions.find(t => t.id === expenseId);
+            if (!exp) return;
+
+            if (exp.linkedRefundId === refundId) {
+                exp.linkedRefundId = null; // 取消关联
             } else {
-                candidateContainer.innerHTML = candidateExpenses.map(exp => {
-                    const isExactMatch = Math.abs(exp.amount - refundItem.amount) < 0.01;
+                exp.linkedRefundId = refundId; // 绑定关联
+            }
+            saveLocalData();
+        }
+
+        // 自动一键关联所有退款
+        function autoMatchRefunds(showAlert = true) {
+            let matchedCount = 0;
+            const refunds = transactions.filter(t => isRefundRecord(t));
+            const expenses = transactions.filter(t => t.type === 'expense');
+
+            refunds.forEach(ref => {
+                // 如果已经被关联过则跳过
+                if (expenses.some(e => e.linkedRefundId === ref.id)) return;
+
+                const match = expenses.find(exp => 
+                    !exp.linkedRefundId && 
+                    (Math.abs(exp.amount - ref.amount) < 0.01 || 
+                     exp.description.includes(ref.description.replace('退款', '').replace('退款-', '')) ||
+                     ref.description.includes(exp.description))
+                );
+
+                if (match) {
+                    match.linkedRefundId = ref.id;
+                    matchedCount++;
+                }
+            });
+
+            if (showAlert) {
+                if (matchedCount > 0) {
+                    saveLocalData();
+                    alert(`已成功自动关联对冲 ${matchedCount} 笔退款交易！`);
+                } else {
+                    alert('未找到可自动匹配的退款与支出项（需金额相等或商户/说明重合）。');
+                }
+            }
+        }
+
+        // 删除单笔记录
+        function deleteTransaction(id) {
+            if (confirm('确定删除该笔记录吗？')) {
+                transactions = transactions.filter(t => t.id !== id);
+                transactions.forEach(t => { if (t.linkedRefundId === id) t.linkedRefundId = null; });
+                saveLocalData();
+            }
+        }
+
+        function clearAllData() {
+            if (confirm('警告：确定要清空所有记账数据吗？不可恢复！')) {
+                transactions = [];
+                activeCategoryFilter = null;
+                saveLocalData();
+            }
+        }
+
+        // 清除分类筛选过滤器
+        function clearCategoryFilter() {
+            activeCategoryFilter = null;
+            document.getElementById('filterBadge').classList.add('hidden');
+            renderAll();
+        }
+
+        // 渲染与计算
+        function renderAll() {
+            let totalIncome = 0;
+            let totalExpenseGross = 0;
+            let totalRefundOffset = 0;
+            let investInTotal = 0;
+            let investOutTotal = 0;
+            let investCount = 0;
+            const categorySums = {};
+
+            const refundMap = {};
+            transactions.filter(t => isRefundRecord(t)).forEach(r => refundMap[r.id] = r);
+
+            transactions.forEach(item => {
+                const val = parseFloat(item.amount) || 0;
+
+                // 1. 【处理投资理财】（不计入日常收支）
+                if (isInvestmentRecord(item)) {
+                    investCount++;
+                    if (item.type === 'expense' || item.description.includes('买入') || item.description.includes('转入')) {
+                        investInTotal += val;
+                    } else {
+                        investOutTotal += val;
+                    }
+                    return; // 跳过常规日常收支计算
+                }
+
+                // 2. 常规日常收支
+                if (item.type === 'income') {
+                    if (!isRefundRecord(item)) {
+                        totalIncome += val;
+                    }
+                } else {
+                    totalExpenseGross += val;
+                    let netExpense = val;
+
+                    if (item.linkedRefundId && refundMap[item.linkedRefundId]) {
+                        const refVal = refundMap[item.linkedRefundId].amount;
+                        netExpense = Math.max(0, val - refVal);
+                        totalRefundOffset += Math.min(val, refVal);
+                    }
+
+                    categorySums[item.category] = (categorySums[item.category] || 0) + netExpense;
+                }
+            });
+
+            const netExpenseFinal = totalExpenseGross - totalRefundOffset;
+
+            // 渲染看板数据
+            document.getElementById('totalIncome').innerText = `¥${totalIncome.toFixed(2)}`;
+            document.getElementById('totalExpense').innerText = `¥${netExpenseFinal.toFixed(2)}`;
+            document.getElementById('totalRefund').innerText = `¥${totalRefundOffset.toFixed(2)}`;
+            
+            // 投资理财看板渲染
+            document.getElementById('investIn').innerText = `¥${investInTotal.toFixed(2)}`;
+            document.getElementById('investOut').innerText = `¥${investOutTotal.toFixed(2)}`;
+            document.getElementById('investCount').innerText = `${investCount} 笔记录`;
+
+            const net = totalIncome - netExpenseFinal;
+            const netEl = document.getElementById('netBalance');
+            netEl.innerText = `¥${net.toFixed(2)}`;
+            netEl.className = `text-2xl font-bold ${net >= 0 ? 'text-slate-900' : 'text-rose-600'}`;
+
+            // 退款关联提示
+            const unlinkedRefunds = transactions.filter(t => isRefundRecord(t) && !transactions.some(e => e.linkedRefundId === t.id));
+            document.getElementById('suggestedRefundCount').innerText = `${unlinkedRefunds.length} 笔`;
+            document.getElementById('refundSuggestionText').innerText = unlinkedRefunds.length > 0 
+                ? `包含 ${unlinkedRefunds[0].description} (¥${unlinkedRefunds[0].amount.toFixed(2)}) 等未关联退款项。` 
+                : '所有退款项均已完成关联对冲。';
+
+            // 列表显示（带分类筛选过滤）
+            let displayTransactions = transactions;
+            if (activeCategoryFilter) {
+                displayTransactions = transactions.filter(t => t.category === activeCategoryFilter);
+            }
+
+            const listEl = document.getElementById('transactionList');
+            document.getElementById('recordCount').innerText = `共 ${displayTransactions.length} 笔${activeCategoryFilter ? ' (' + activeCategoryFilter + ')' : ''}`;
+
+            if (displayTransactions.length === 0) {
+                listEl.innerHTML = `<div class="p-8 text-center text-slate-400 text-sm">暂无符合条件的记录~</div>`;
+            } else {
+                const unlinkedRefundList = transactions.filter(t => isRefundRecord(t));
+
+                listEl.innerHTML = displayTransactions.map(item => {
+                    const isInvest = isInvestmentRecord(item);
+                    const isRefund = isRefundRecord(item);
+                    const linkedRef = item.linkedRefundId ? refundMap[item.linkedRefundId] : null;
+
                     return `
-                        <div class="p-3 border rounded-xl flex items-center justify-between hover:bg-indigo-50/50 transition border-slate-200">
-                            <div>
-                                <div class="font-bold text-xs text-slate-800">${exp.description} ${isExactMatch ? '<span class="bg-emerald-100 text-emerald-700 text-[10px] px-1.5 py-0.2 rounded ml-1">金额精确匹配</span>' : ''}</div>
-                                <div class="text-[11px] text-slate-400">${exp.date} · 分类: ${exp.category}</div>
+                        <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-50 transition">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                                    isInvest ? 'bg-blue-100 text-blue-600' :
+                                    isRefund ? 'bg-amber-100 text-amber-600' : 
+                                    item.type === 'income' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'
+                                }">
+                                    <i class="fa-solid ${
+                                        isInvest ? 'fa-piggy-bank' :
+                                        isRefund ? 'fa-rotate-left' : 
+                                        item.type === 'income' ? 'fa-arrow-down' : 'fa-arrow-up'
+                                    }"></i>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
+                                        <span>${item.description}</span>
+                                        ${isInvest ? `<span class="text-[10px] bg-blue-100 text-blue-800 border border-blue-200 px-1.5 py-0.5 rounded font-medium">不计收支·理财</span>` : ''}
+                                        ${linkedRef ? `
+                                            <span class="text-[10px] bg-amber-100 text-amber-800 border border-amber-300 px-1.5 py-0.5 rounded font-medium">
+                                                <i class="fa-solid fa-link text-[9px]"></i> 已对冲退款 -¥${linkedRef.amount.toFixed(2)}
+                                            </span>
+                                        ` : ''}
+                                    </div>
+                                    <div class="text-xs text-slate-400 mt-0.5">
+                                        ${item.date} · <span class="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">${item.category}</span>
+                                        ${item.remark ? `<span class="ml-1 text-slate-400">(${item.remark})</span>` : ''}
+                                    </div>
+                                </div>
                             </div>
-                            <div class="text-right">
-                                <div class="font-bold text-xs text-rose-600">¥${exp.amount.toFixed(2)}</div>
-                                <button onclick="confirmLink('${refundId}', '${exp.id}')" class="mt-1 px-2.5 py-1 bg-indigo-600 text-white rounded text-[11px] font-medium hover:bg-indigo-700 transition">
-                                    确认关联
+
+                            <div class="flex items-center justify-between sm:justify-end space-x-3 mt-2 sm:mt-0">
+                                ${item.type === 'expense' && !isInvest ? `
+                                    <select onchange="toggleLinkRefund('${item.id}', this.value)" class="text-xs border border-slate-200 rounded px-2 py-1 bg-slate-50 text-slate-600 focus:outline-none shadow-sm">
+                                        <option value="">${item.linkedRefundId ? '解除关联退款' : '+ 关联退款对冲'}</option>
+                                        ${unlinkedRefundList.map(r => `
+                                            <option value="${r.id}" ${item.linkedRefundId === r.id ? 'selected' : ''}>
+                                                退款: ${r.description} (¥${r.amount})
+                                            </option>
+                                        `).join('')}
+                                    </select>
+                                me` : ''}
+
+                                <span class="font-bold text-sm ${
+                                    isInvest ? 'text-blue-600' :
+                                    isRefund ? 'text-amber-600' :
+                                    item.type === 'income' ? 'text-emerald-600' : 'text-rose-600'
+                                }">
+                                    ${item.type === 'income' ? '+' : '-'}${parseFloat(item.amount).toFixed(2)}
+                                </span>
+
+                                <button onclick="deleteTransaction('${item.id}')" class="text-slate-300 hover:text-rose-500 transition p-1" title="删除">
+                                    <i class="fa-solid fa-trash-can"></i>
                                 </button>
                             </div>
                         </div>
@@ -655,217 +749,18 @@
                 }).join('');
             }
 
-            document.getElementById('linkModal').classList.remove('hidden');
-        }
-
-        function closeLinkModal() {
-            document.getElementById('linkModal').classList.add('hidden');
-            activeRefundIdForLinking = null;
-        }
-
-        function confirmLink(refundId, expenseId) {
-            const refund = transactions.find(t => t.id === refundId);
-            if (refund) {
-                refund.linkedExpenseId = expenseId;
-                saveLocalData();
-                closeLinkModal();
-            }
-        }
-
-        function unlinkRefund(refundId) {
-            const refund = transactions.find(t => t.id === refundId);
-            if (refund) {
-                refund.linkedExpenseId = null;
-                saveLocalData();
-            }
-        }
-
-        function deleteTransaction(id) {
-            if (confirm("确定要删除这条记账记录吗？")) {
-                // 如果删除的是被关联的支出，释放相关的退款
-                transactions.forEach(t => {
-                    if (t.linkedExpenseId === id) t.linkedExpenseId = null;
-                });
-                transactions = transactions.filter(t => t.id !== id);
-                saveLocalData();
-            }
-        }
-
-        function clearAllData() {
-            if (confirm("警告：确定要清空全部记账数据吗？此操作无法撤销！")) {
-                transactions = [];
-                saveLocalData();
-            }
-        }
-
-        // 核心计算与 UI 渲染
-        function renderAll() {
-            let totalIncome = 0;
-            let grossExpense = 0;
-            let totalRefundsAmount = 0;
-            let totalRefundsOffset = 0;
-            let unlinkedCount = 0;
-
-            const categorySums = {};
-
-            // 建立支出 ID 到 关联退款总额 的映射
-            const expenseRefundMap = {};
-            transactions.forEach(t => {
-                if (t.type === 'refund') {
-                    totalRefundsAmount += t.amount;
-                    if (t.linkedExpenseId) {
-                        expenseRefundMap[t.linkedExpenseId] = (expenseRefundMap[t.linkedExpenseId] || 0) + t.amount;
-                        totalRefundsOffset += t.amount;
-                    } else {
-                        unlinkedCount++;
-                    }
-                }
-            });
-
-            transactions.forEach(item => {
-                if (item.type === 'income') {
-                    totalIncome += item.amount;
-                } else if (item.type === 'expense') {
-                    grossExpense += item.amount;
-                    // 计算扣除退款后的净支出
-                    const refunded = expenseRefundMap[item.id] || 0;
-                    const netExp = Math.max(0, item.amount - refunded);
-                    categorySums[item.category] = (categorySums[item.category] || 0) + netExp;
-                }
-            });
-
-            const netExpenseTotal = Math.max(0, grossExpense - totalRefundsOffset);
-
-            // 更新面板顶部卡片
-            document.getElementById('totalIncome').innerText = `¥${totalIncome.toFixed(2)}`;
-            document.getElementById('totalExpense').innerText = `¥${netExpenseTotal.toFixed(2)}`;
-            document.getElementById('refundOffsetInfo').innerText = `已被关联退款冲抵: ¥${totalRefundsOffset.toFixed(2)}`;
-            
-            document.getElementById('totalRefunds').innerText = `¥${totalRefundsAmount.toFixed(2)}`;
-            document.getElementById('unlinkedRefundsCount').innerText = `待关联退款: ${unlinkedCount} 笔`;
-
-            const netBalance = totalIncome - netExpenseTotal;
-            const netEl = document.getElementById('netBalance');
-            netEl.innerText = `¥${netBalance.toFixed(2)}`;
-            netEl.className = `text-2xl font-bold ${netBalance >= 0 ? 'text-slate-900' : 'text-rose-600'}`;
-
-            // 渲染交易明细列表
-            const listEl = document.getElementById('transactionList');
-            document.getElementById('recordCount').innerText = `共 ${transactions.length} 笔`;
-
-            if (transactions.length === 0) {
-                listEl.innerHTML = `<div class="p-8 text-center text-slate-400 text-sm">暂无记账记录，请在上侧上传 Excel/CSV/PDF 账单或手动记一笔~</div>`;
-            } else {
-                listEl.innerHTML = transactions.map(item => {
-                    if (item.type === 'expense') {
-                        const refundedAmt = expenseRefundMap[item.id] || 0;
-                        const isRefunded = refundedAmt > 0;
-                        return `
-                            <div class="p-4 flex items-center justify-between hover:bg-slate-50 transition">
-                                <div class="flex items-center space-x-3">
-                                    <div class="w-10 h-10 rounded-full flex items-center justify-center bg-rose-100 text-rose-600 font-bold text-sm">
-                                        <i class="fa-solid fa-arrow-up"></i>
-                                    </div>
-                                    <div>
-                                        <div class="font-medium text-slate-900 text-sm flex items-center space-x-1.5">
-                                            <span>${item.description}</span>
-                                            ${isRefunded ? `<span class="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded-full font-semibold">已退款冲抵 ¥${refundedAmt.toFixed(2)}</span>` : ''}
-                                        </div>
-                                        <div class="text-xs text-slate-400">${item.date} · 分类: <span class="font-medium text-slate-600">${item.category}</span></div>
-                                    </div>
-                                </div>
-                                <div class="flex items-center space-x-3">
-                                    <div class="text-right">
-                                        <div class="font-bold text-sm text-rose-600 ${isRefunded ? 'line-through text-slate-400' : ''}">
-                                            -${item.amount.toFixed(2)}
-                                        </div>
-                                        ${isRefunded ? `<div class="font-bold text-xs text-slate-800">实际净支出: ¥${Math.max(0, item.amount - refundedAmt).toFixed(2)}</div>` : ''}
-                                    </div>
-                                    <button onclick="deleteTransaction('${item.id}')" class="text-slate-300 hover:text-rose-500 transition p-1">
-                                        <i class="fa-solid fa-trash-can"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        `;
-                    } else if (item.type === 'income') {
-                        return `
-                            <div class="p-4 flex items-center justify-between hover:bg-slate-50 transition">
-                                <div class="flex items-center space-x-3">
-                                    <div class="w-10 h-10 rounded-full flex items-center justify-center bg-emerald-100 text-emerald-600 font-bold text-sm">
-                                        <i class="fa-solid fa-arrow-down"></i>
-                                    </div>
-                                    <div>
-                                        <div class="font-medium text-slate-900 text-sm">${item.description}</div>
-                                        <div class="text-xs text-slate-400">${item.date} · 分类: <span class="font-medium text-slate-600">${item.category}</span></div>
-                                    </div>
-                                </div>
-                                <div class="flex items-center space-x-3">
-                                    <span class="font-bold text-sm text-emerald-600">+${item.amount.toFixed(2)}</span>
-                                    <button onclick="deleteTransaction('${item.id}')" class="text-slate-300 hover:text-rose-500 transition p-1">
-                                        <i class="fa-solid fa-trash-can"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        `;
-                    } else if (item.type === 'refund') {
-                        const linkedExpense = item.linkedExpenseId ? transactions.find(t => t.id === item.linkedExpenseId) : null;
-                        return `
-                            <div class="p-4 flex items-center justify-between bg-amber-50/40 hover:bg-amber-50/80 transition">
-                                <div class="flex items-center space-x-3">
-                                    <div class="w-10 h-10 rounded-full flex items-center justify-center bg-amber-100 text-amber-600 font-bold text-sm">
-                                        <i class="fa-solid fa-rotate-left"></i>
-                                    </div>
-                                    <div>
-                                        <div class="font-medium text-slate-900 text-sm flex items-center space-x-2">
-                                            <span>${item.description}</span>
-                                            <span class="bg-amber-200 text-amber-800 text-[10px] px-1.5 py-0.2 rounded font-semibold">退款/冲抵</span>
-                                        </div>
-                                        <div class="text-xs text-slate-500">
-                                            ${item.date} · 关联状态: 
-                                            ${linkedExpense ? `
-                                                <span class="text-indigo-600 font-semibold">已关联至 "${linkedExpense.description}"</span>
-                                                <button onclick="unlinkRefund('${item.id}')" class="ml-1 text-[10px] text-slate-400 underline hover:text-rose-600">解除关联</button>
-                                            ` : `
-                                                <span class="text-amber-600 font-medium">尚未关联原支出</span>
-                                            `}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="flex items-center space-x-3">
-                                    <div class="text-right">
-                                        <span class="font-bold text-sm text-amber-600">+${item.amount.toFixed(2)}</span>
-                                    </div>
-                                    ${!linkedExpense ? `
-                                        <button onclick="openLinkModal('${item.id}')" title="关联至原支出记录" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-2.5 py-1 rounded-lg font-medium transition border border-indigo-200 flex items-center">
-                                            <i class="fa-solid fa-link mr-1"></i>关联
-                                        </button>
-                                    ` : ''}
-                                    <button onclick="deleteTransaction('${item.id}')" class="text-slate-300 hover:text-rose-500 transition p-1">
-                                        <i class="fa-solid fa-trash-can"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        `;
-                    }
-                }).join('');
-            }
-
             renderChart(categorySums);
         }
 
-        // 渲染 Chart.js 图表
+        // 3. 【圆环图点击联动跳转与筛选】
         function renderChart(categorySums) {
             const ctx = document.getElementById('categoryChart').getContext('2d');
             const labels = Object.keys(categorySums);
             const data = Object.values(categorySums);
 
-            if (chartInstance) {
-                chartInstance.destroy();
-            }
+            if (chartInstance) chartInstance.destroy();
 
-            if (labels.length === 0) {
-                return;
-            }
+            if (labels.length === 0) return;
 
             chartInstance = new Chart(ctx, {
                 type: 'doughnut',
@@ -873,10 +768,7 @@
                     labels: labels,
                     datasets: [{
                         data: data,
-                        backgroundColor: [
-                            '#6366f1', '#ec4899', '#10b981', '#f59e0b',
-                            '#3b82f6', '#8b5cf6', '#14b8a6', '#f97316'
-                        ],
+                        backgroundColor: ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#3b82f6', '#8b5cf6', '#14b8a6', '#f97316'],
                         borderWidth: 2,
                         borderColor: '#ffffff'
                     }]
@@ -884,6 +776,23 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    onClick: (event, activeElements) => {
+                        if (activeElements && activeElements.length > 0) {
+                            const index = activeElements[0].index;
+                            const clickedCategory = labels[index];
+                            
+                            // 触发分类联动筛选
+                            activeCategoryFilter = clickedCategory;
+                            document.getElementById('filterCategoryName').innerText = clickedCategory;
+                            document.getElementById('filterBadge').classList.remove('hidden');
+                            
+                            // 重新渲染列表
+                            renderAll();
+
+                            // 自动平滑滚动到明细列表
+                            document.getElementById('transactionList').scrollIntoView({ behavior: 'smooth' });
+                        }
+                    },
                     plugins: {
                         legend: {
                             position: 'right',
@@ -894,63 +803,35 @@
             });
         }
 
-        // 导出 JSON 备份
-        function exportJSONBackup() {
-            if (transactions.length === 0) {
-                alert("当前没有记账数据可导出！");
-                return;
-            }
+        function exportBackup() {
+            if (transactions.length === 0) { alert('当前没有可导出的数据'); return; }
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(transactions, null, 2));
-            const anchor = document.createElement('a');
-            anchor.setAttribute("href", dataStr);
-            anchor.setAttribute("download", `AI智能记账备份_${new Date().toISOString().slice(0, 10)}.json`);
-            document.body.appendChild(anchor);
-            anchor.click();
-            anchor.remove();
+            const dl = document.createElement('a');
+            dl.setAttribute("href", dataStr);
+            dl.setAttribute("download", `智能记账系统备份_${new Date().toISOString().slice(0,10)}.json`);
+            dl.click();
+            dl.remove();
         }
 
-        // 导入 JSON 恢复
-        function importJSONBackup(event) {
-            const file = event.target.files[0];
+        function importBackup(e) {
+            const file = e.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function(evt) {
                 try {
-                    const imported = JSON.parse(e.target.result);
+                    const imported = JSON.parse(evt.target.result);
                     if (Array.isArray(imported)) {
-                        if (confirm(`成功解析到 ${imported.length} 条历史账单记录，是否确认覆盖当前数据？`)) {
+                        if (confirm(`准备恢复 ${imported.length} 条数据，是否覆盖当前所有记账数据？`)) {
                             transactions = imported;
                             saveLocalData();
-                            alert("恢复成功！");
+                            alert('数据已成功恢复！');
                         }
-                    } else {
-                        alert("文件格式不正确，请上传有效的 JSON 备份文件！");
-                    }
-                } catch (err) {
-                    alert("JSON 解析失败！");
-                }
+                    } else { alert('备份文件格式有误！'); }
+                } catch (err) { alert('解析 JSON 备份文件失败'); }
             };
             reader.readAsText(file);
-            event.target.value = '';
-        }
-
-        // 下载示例 CSV 模板
-        function downloadSampleCSV() {
-            const sampleCSV = `交易时间,商品/说明,金额,收/支,分类
-2026-07-20,星巴克咖啡,32.00,支出,餐饮美食
-2026-07-21,滴滴出行打车,25.50,支出,交通出行
-2026-07-22,优衣库购买衣服,299.00,支出,购物消费
-2026-07-23,优衣库退货返款,299.00,退款,退款冲抵
-2026-07-25,公司月度工资发放,12500.00,收入,职业工资`;
-
-            const blob = new Blob(["\ufeff" + sampleCSV], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = "智能记账批量导入模版示例.csv";
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            e.target.value = '';
         }
     </script>
 </body>
