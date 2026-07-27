@@ -3,504 +3,369 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>安静的小嫑嫑记账簿 - 云端可爱版</title>
+    <title>极简智能记账系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Kosugi+Maru&display=swap');
-        
         body {
-            font-family: 'Kosugi Maru', sans-serif;
-            background-color: #fcfaf6;
+            background-color: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
-        
-        .cute-card {
-            background: white;
-            border-radius: 2rem;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.03);
-            transition: all 0.3s ease;
-        }
-        
-        .cute-btn {
-            border-radius: 1.5rem;
-            transition: all 0.2s ease;
-        }
-        .cute-btn:hover {
-            transform: translateY(-2px);
-        }
-        
-        .color-primary { color: #8bab0f; }
-        .color-accent { color: #a181cd; }
-        .bg-primary { background-color: #8bab0f; }
-        .bg-accent { background-color: #a181cd; }
-        .bg-quiet-green { background-color: #f1f8e0; }
     </style>
 </head>
-<body class="text-slate-800 p-4 md:p-8">
+<body class="text-slate-800 pb-12">
 
-    <div class="max-w-7xl mx-auto space-y-8">
-        
-        <header class="flex flex-col md:flex-row justify-between items-start md:items-center cute-card p-8 gap-4">
-            <div>
-                <h1 class="text-3xl font-bold flex items-center gap-2 color-primary">
-                    <img src="https://emojicdn.elk.sh/💰?style=pixel" class="w-8 h-8">
-                    安静的小嫑嫑记账簿
-                </h1>
-                <p class="text-sm text-slate-500 mt-2">云端永久同步 · 账户追踪 · 治愈报告 · 简约可爱</p>
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 text-white p-2 rounded-lg">
+                    <i class="fa-solid fa-wallet text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-900">智能记账系统</h1>
+                    <p class="text-xs text-slate-500">本地存储 + JSON 文件安全备份版</p>
+                </div>
             </div>
             
-            <div class="flex flex-wrap gap-2 text-xs">
-                <button onclick="openConfigModal()" class="px-5 py-3 bg-white text-slate-700 cute-btn font-medium hover:bg-quiet-green transition border border-slate-100 flex items-center gap-1.5">
-                    ⚙️ 游戏云端配置 (Supabase)
+            <div class="flex items-center space-x-2">
+                <button onclick="exportBackup()" class="flex items-center space-x-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg transition border border-slate-300">
+                    <i class="fa-solid fa-download"></i>
+                    <span class="hidden sm:inline">导出备份</span>
                 </button>
-                <button onclick="exportBackup()" class="px-5 py-3 bg-white text-slate-700 cute-btn font-medium hover:bg-quiet-green border border-slate-100">
-                    📤 导出备份
-                </button>
+                <label class="flex items-center space-x-1 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg transition border border-indigo-200 cursor-pointer">
+                    <i class="fa-solid fa-upload"></i>
+                    <span class="hidden sm:inline">导入恢复</span>
+                    <input type="file" id="importFileInput" accept=".json" class="hidden" onchange="importBackup(event)">
+                </label>
             </div>
-        </header>
+        </div>
+    </header>
 
-        <div class="flex border border-slate-100 gap-2 bg-white p-3 rounded-full shadow-inner">
-            <button id="tab-overview" onclick="switchTab('overview')" class="flex-1 px-5 py-3 font-medium text-sm rounded-full transition bg-primary text-white">
-                📋 我的流水
-            </button>
-            <button id="tab-monthly" onclick="switchTab('monthly')" class="flex-1 px-5 py-3 font-medium text-sm rounded-full transition text-slate-600 hover:bg-quiet-green">
-                📊 月度复盘
-            </button>
-            <button id="tab-annual" onclick="switchTab('annual')" class="flex-1 px-5 py-3 font-medium text-sm rounded-full transition text-slate-600 hover:bg-quiet-green">
-                📅 年度终结
-            </button>
+    <main class="max-w-5xl mx-auto px-4 py-6 space-y-6">
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <div class="text-sm font-medium text-slate-500 mb-1">结余余额</div>
+                <div id="netBalance" class="text-2xl font-bold text-slate-900">¥0.00</div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <div class="text-sm font-medium text-emerald-600 mb-1">总收入</div>
+                <div id="totalIncome" class="text-2xl font-bold text-emerald-600">¥0.00</div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <div class="text-sm font-medium text-rose-500 mb-1">总支出</div>
+                <div id="totalExpense" class="text-2xl font-bold text-rose-500">¥0.00</div>
+            </div>
         </div>
 
-        <div id="view-overview" class="grid grid-cols-1 xl:grid-cols-3 gap-8">
-            <div class="space-y-6">
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="cute-card p-6 flex flex-col justify-between" style="border-left: 6px solid #8bab0f;">
-                        <p class="text-xs text-slate-400 font-medium">本月有效收入</p>
-                        <p id="totalIncome" class="text-2xl font-bold color-primary mt-1">￥0.00</p>
-                    </div>
-                    <div class="cute-card p-6 flex flex-col justify-between" style="border-left: 6px solid #f43f5e;">
-                        <p class="text-xs text-slate-400 font-medium">本月实际支出</p>
-                        <p id="totalExpense" class="text-2xl font-bold text-rose-600 mt-1">￥0.00</p>
-                    </div>
-                    <div class="cute-card p-6 flex flex-col justify-between" style="border-left: 6px solid #a181cd;">
-                        <p class="text-xs text-slate-400 font-medium">结余金额</p>
-                        <p id="netBalance" class="text-2xl font-bold color-accent mt-1">￥0.00</p>
-                    </div>
-                    <div class="cute-card p-6 flex flex-col justify-between" style="border-left: 6px solid #ffc107;">
-                        <p class="text-xs text-slate-400 font-medium">已对冲退款</p>
-                        <p id="totalRefunded" class="text-2xl font-bold text-amber-600 mt-1">￥0.00</p>
-                    </div>
-                </div>
-
-                <div class="cute-card p-8 space-y-6">
-                    <h2 class="text-xl font-bold text-slate-900">🖊️ 手动记一笔</h2>
-                    <form id="transactionForm" onsubmit="handleAddTransaction(event)" class="space-y-4">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs text-slate-500 mb-1.5">类型</label>
-                                <select id="type" class="w-full border rounded-full p-3 text-sm bg-quiet-green" onchange="updateCategoryOptions()">
-                                    <option value="expense">支出 (-)</option>
-                                    <option value="income">收入 (+)</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs text-slate-500 mb-1.5">金额 (元)</label>
-                                <input type="number" step="0.01" id="amount" required placeholder="0.00" class="w-full border rounded-full p-3 text-sm bg-quiet-green">
-                            </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-1 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-fit">
+                <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center">
+                    <i class="fa-solid fa-pen-to-square text-indigo-600 mr-2"></i>记一笔
+                </h2>
+                <form id="transactionForm" onsubmit="handleAddTransaction(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">交易类型</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" id="btnExpense" onclick="setType('expense')" class="py-2 text-sm font-medium rounded-lg border border-rose-500 bg-rose-500 text-white transition">支出</button>
+                            <button type="button" id="btnIncome" onclick="setType('income')" class="py-2 text-sm font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition">收入</button>
                         </div>
+                    </div>
 
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs text-slate-500 mb-1.5">途径账户</label>
-                                <select id="account" class="w-full border rounded-full p-3 text-sm bg-quiet-green">
-                                    <option value="支付宝">支付宝</option>
-                                    <option value="微信支付">微信支付</option>
-                                    <option value="银行卡">银行卡</option>
-                                    <option value="现金">现金</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs text-slate-500 mb-1.5">分类用途</label>
-                                <select id="category" class="w-full border rounded-full p-3 text-sm bg-quiet-green"></select>
-                            </div>
-                        </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">金额 (元)</label>
+                        <input type="number" step="0.01" id="amount" required placeholder="0.00" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
 
-                        <div>
-                            <label class="block text-xs text-slate-500 mb-1.5">商户/备注</label>
-                            <input type="text" id="merchant" placeholder="例如：便利店买牛奶" class="w-full border rounded-full p-3 text-sm bg-quiet-green">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs text-slate-500 mb-1.5">交易日期</label>
-                            <input type="date" id="date" required class="w-full border rounded-full p-3 text-sm bg-quiet-green">
-                        </div>
-
-                        <button type="submit" class="w-full bg-primary text-white py-4 rounded-full font-bold cute-btn">保存记录</button>
-                    </form>
-                </div>
-            </div>
-
-            <div class="xl:col-span-2 space-y-6">
-                <div class="cute-card p-8">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-xl font-bold text-slate-900">📋 明细列表</h2>
-                        <select id="filterType" onchange="renderOverview()" class="border text-xs rounded-full p-2 bg-quiet-green">
-                            <option value="all">全部类型</option>
-                            <option value="expense">支出</option>
-                            <option value="income">收入</option>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">用途分类</label>
+                        <select id="category" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="餐饮美食">🍔 餐饮美食</option>
+                            <option value="交通出行">🚗 交通出行</option>
+                            <option value="购物消费">🛍️ 购物消费</option>
+                            <option value="日常娱乐">🎮 日常娱乐</option>
+                            <option value="居家物业">🏠 居家物业</option>
+                            <option value="医疗健康">🏥 医疗健康</option>
+                            <option value="职业工资">💰 职业工资</option>
+                            <option value="兼职副业">📈 兼职副业</option>
+                            <option value="其他">📦 其他</option>
                         </select>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm">
-                            <thead>
-                                <tr class="text-xs text-slate-400 border-b">
-                                    <th class="pb-4">日期</th>
-                                    <th class="pb-4">分类</th>
-                                    <th class="pb-4">商户/备注</th>
-                                    <th class="pb-4">账户</th>
-                                    <th class="pb-4 text-right">金额</th>
-                                    <th class="pb-4 text-center">状态</th>
-                                    <th class="pb-4 text-center">操作</th>
-                                </tr>
-                            </thead>
-                            <tbody id="transactionList" class="divide-y divide-slate-100"></tbody>
-                        </table>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">交易日期</label>
+                        <input type="date" id="date" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">备注/说明</label>
+                        <input type="text" id="description" placeholder="例如：买咖啡、发工资..." class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+
+                    <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow transition">
+                        保存记录
+                    </button>
+                </form>
+            </div>
+
+            <div class="lg:col-span-2 space-y-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <h2 class="text-base font-bold text-slate-900 mb-4 flex items-center">
+                        <i class="fa-solid fa-chart-pie text-indigo-600 mr-2"></i>支出分类占比
+                    </h2>
+                    <div class="h-48 relative flex justify-center">
+                        <canvas id="categoryChart"></canvas>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <div id="view-monthly" class="hidden space-y-8">
-            <div class="cute-card p-8 flex flex-wrap justify-between items-center gap-4">
-                <h2 class="text-xl font-bold text-slate-900">📊 月度复盘看板</h2>
-                <div class="flex items-center gap-3">
-                    <label class="text-xs text-slate-500">选择月份：</label>
-                    <input type="month" id="monthlyPicker" onchange="renderMonthlyView()" class="border rounded-full p-3 text-sm bg-quiet-green">
-                </div>
-            </div>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div class="cute-card p-8 space-y-4">
-                    <h3 class="text-sm font-semibold text-slate-700">当月支出分类占比</h3>
-                    <div class="h-64 flex justify-center"><canvas id="monthlyCategoryChart"></canvas></div>
-                </div>
-                <div class="cute-card p-8 space-y-4">
-                    <h3 class="text-sm font-semibold text-slate-700">当月各账户支出分布</h3>
-                    <div class="h-64 flex justify-center"><canvas id="monthlyAccountChart"></canvas></div>
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-4 border-b border-slate-100 flex justify-between items-center">
+                        <h2 class="text-base font-bold text-slate-900 flex items-center">
+                            <i class="fa-solid fa-list-check text-indigo-600 mr-2"></i>收支交易明细
+                        </h2>
+                        <span id="recordCount" class="text-xs text-slate-500">共 0 笔</span>
+                    </div>
+
+                    <div id="transactionList" class="divide-y divide-slate-100 max-h-96 overflow-y-auto">
+                        </div>
                 </div>
             </div>
         </div>
-
-        <div id="view-annual" class="hidden space-y-8">
-            <div class="cute-card p-8 flex flex-wrap justify-between items-center gap-4">
-                <h2 class="text-xl font-bold text-slate-900">📅 年度终结报告</h2>
-                <div class="flex items-center gap-3">
-                    <label class="text-xs text-slate-500">选择年份：</label>
-                    <select id="annualYearPicker" onchange="renderAnnualView()" class="border rounded-full p-3 text-sm bg-quiet-green"></select>
-                </div>
-            </div>
-            <div class="cute-card p-8 space-y-4">
-                <h3 class="text-sm font-semibold text-slate-700">全年度收支趋势对比</h3>
-                <div class="h-72"><canvas id="annualTrendChart"></canvas></div>
-            </div>
-        </div>
-
-    </div>
-
-    <div id="configModal" class="fixed inset-0 bg-black/30 hidden flex items-center justify-center p-4 z-50">
-        <div class="cute-card p-8 max-w-lg w-full space-y-4">
-            <h3 class="text-xl font-bold flex items-center gap-2">⚙️ 云端数据库配置 (Supabase)</h3>
-            <div>
-                <label class="block text-xs text-slate-500 mb-1">Project URL</label>
-                <input type="text" id="sbUrl" class="w-full border rounded-full p-3 text-sm bg-quiet-green" placeholder="https://xxx.supabase.co">
-            </div>
-            <div>
-                <label class="block text-xs text-slate-500 mb-1">Anon Key (public)</label>
-                <input type="password" id="sbKey" class="w-full border rounded-full p-3 text-sm bg-quiet-green" placeholder="eyJhbGciOi...">
-            </div>
-            <div class="flex justify-end gap-3 pt-4">
-                <button onclick="closeConfigModal()" class="px-5 py-3 cute-btn font-medium bg-white text-slate-500 border">取消</button>
-                <button onclick="saveConfig()" class="px-5 py-3 cute-btn font-medium bg-accent text-white">保存并同步</button>
-            </div>
-        </div>
-    </div>
+    </main>
 
     <script>
-        const CATEGORIES = {
-            expense: ['餐饮美食', '交通出行', '日常购物', '住房缴费', '休闲娱乐', '医疗健康', '数码电器', '其它支出'],
-            income: ['工资收入', '理财收益', '兼职副业', '红包转账', '其它收入']
-        };
+        // 全局数据状态与当前表单类型
+        let transactions = [];
+        let currentType = 'expense';
+        let chartInstance = null;
 
-        let transactions = JSON.parse(localStorage.getItem('accounting_data_vcute')) || [];
-        let supabaseClient = null;
-
-        let monthlyCatChart = null;
-        let monthlyAccChart = null;
-        let annualChart = null;
-
-        document.addEventListener("DOMContentLoaded", () => {
+        // 页面初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 设置日期输入框默认值为今天
             document.getElementById('date').valueAsDate = new Date();
-            const now = new Date();
-            document.getElementById('monthlyPicker').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            
-            initYearPicker();
-            updateCategoryOptions();
-            initSupabase();
-            renderAll();
+            // 加载本地数据
+            loadLocalData();
         });
 
-        function initYearPicker() {
-            const currentYear = new Date().getFullYear();
-            const select = document.getElementById('annualYearPicker');
-            select.innerHTML = '';
-            for (let y = currentYear; y >= currentYear - 5; y--) {
-                select.innerHTML += `<option value="${y}">${y} 年</option>`;
+        // 切换支出/收入类型切换
+        function setType(type) {
+            currentType = type;
+            const btnExpense = document.getElementById('btnExpense');
+            const btnIncome = document.getElementById('btnIncome');
+
+            if (type === 'expense') {
+                btnExpense.className = "py-2 text-sm font-medium rounded-lg border border-rose-500 bg-rose-500 text-white transition";
+                btnIncome.className = "py-2 text-sm font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition";
+            } else {
+                btnIncome.className = "py-2 text-sm font-medium rounded-lg border border-emerald-500 bg-emerald-500 text-white transition";
+                btnExpense.className = "py-2 text-sm font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition";
             }
         }
 
-        function initSupabase() {
-            const url = localStorage.getItem('sb_url');
-            const key = localStorage.getItem('sb_key');
-            if (url && key) {
-                document.getElementById('sbUrl').value = url;
-                document.getElementById('sbKey').value = key;
+        // 加载 LocalStorage 本地存储
+        function loadLocalData() {
+            const saved = localStorage.getItem('smart_accounting_data');
+            if (saved) {
                 try {
-                    supabaseClient = supabase.createClient(url, key);
-                    syncFromSupabase();
-                } catch(e) {
-                    console.error("Supabase init error:", e);
+                    transactions = JSON.parse(saved);
+                } catch (e) {
+                    console.error('本地数据解析失败:', e);
+                    transactions = [];
                 }
-            }
-        }
-
-        async function syncFromSupabase() {
-            if (!supabaseClient) return;
-            try {
-                const { data, error } = await supabaseClient.from('transactions').select('*');
-                if (!error && data) {
-                    transactions = data;
-                    renderAll();
-                }
-            } catch(e) {
-                console.error("Fetch error:", e);
-            }
-        }
-
-        function updateCategoryOptions() {
-            const type = document.getElementById('type').value;
-            const select = document.getElementById('category');
-            select.innerHTML = CATEGORIES[type].map(c => `<option value="${c}">${c}</option>`).join('');
-        }
-
-        function switchTab(tab) {
-            ['overview', 'monthly', 'annual'].forEach(t => {
-                document.getElementById(`view-${t}`).classList.add('hidden');
-                document.getElementById(`tab-${t}`).className = "flex-1 px-5 py-3 font-medium text-sm rounded-full transition text-slate-600 hover:bg-quiet-green";
-            });
-            document.getElementById(`view-${tab}`).classList.remove('hidden');
-            document.getElementById(`tab-${tab}`).className = "flex-1 px-5 py-3 font-medium text-sm rounded-full transition bg-primary text-white";
-
-            if (tab === 'monthly') renderMonthlyView();
-            if (tab === 'annual') renderAnnualView();
-        }
-
-        function renderAll() {
-            renderSummary();
-            renderOverview();
-            localStorage.setItem('accounting_data_vcute', JSON.stringify(transactions));
-        }
-
-        function renderSummary() {
-            const now = new Date();
-            const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            
-            let income = 0, expense = 0, refunded = 0;
-
-            transactions.forEach(t => {
-                if (t.date && t.date.startsWith(currentMonthStr)) {
-                    if (t.is_refunded) {
-                        refunded += Number(t.amount);
-                    } else if (t.type === 'income') {
-                        income += Number(t.amount);
-                    } else if (t.type === 'expense') {
-                        expense += Number(t.amount);
-                    }
-                }
-            });
-
-            document.getElementById('totalIncome').innerText = `￥${income.toFixed(2)}`;
-            document.getElementById('totalExpense').innerText = `￥${expense.toFixed(2)}`;
-            document.getElementById('netBalance').innerText = `￥${(income - expense).toFixed(2)}`;
-            document.getElementById('totalRefunded').innerText = `￥${refunded.toFixed(2)}`;
-        }
-
-        function renderOverview() {
-            const filter = document.getElementById('filterType').value;
-            const list = document.getElementById('transactionList');
-            list.innerHTML = '';
-
-            const filtered = transactions.filter(t => filter === 'all' || t.type === filter);
-            
-            filtered.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(t => {
-                const tr = document.createElement('tr');
-                tr.className = t.is_refunded ? "line-through opacity-50 bg-slate-50 transition" : "hover:bg-quiet-green transition";
-                tr.innerHTML = `
-                    <td class="py-4 text-slate-500 text-xs">${t.date}</td>
-                    <td class="py-4"><span class="px-3 py-1 rounded-full text-xs font-medium ${t.type==='income'?'bg-quiet-green color-primary':'bg-rose-50 text-rose-600'}">${t.category}</span></td>
-                    <td class="py-4 text-slate-700 text-xs">${t.merchant || '-'}</td>
-                    <td class="py-4 text-slate-500 text-xs">${t.account || '默认'}</td>
-                    <td class="py-4 text-right font-semibold ${t.is_refunded ? 'text-slate-400' : (t.type==='income'?'color-primary':'text-rose-600')}">
-                        ${t.type==='income'?'+':'-'}￥${Number(t.amount).toFixed(2)}
-                    </td>
-                    <td class="py-4 text-center">
-                        <button onclick="toggleRefund(${t.id})" class="text-xs cute-btn px-2.5 py-1 ${t.is_refunded ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500 hover:bg-amber-50'}">
-                            ${t.is_refunded ? '已退款' : '标记退款'}
-                        </button>
-                    </td>
-                    <td class="py-4 text-center">
-                        <button onclick="deleteTransaction(${t.id})" class="text-xs text-slate-400 hover:text-rose-500">删除</button>
-                    </td>
-                `;
-                list.appendChild(tr);
-            });
-        }
-
-        async function handleAddTransaction(e) {
-            e.preventDefault();
-            const item = {
-                id: Date.now(),
-                type: document.getElementById('type').value,
-                amount: parseFloat(document.getElementById('amount').value),
-                account: document.getElementById('account').value,
-                category: document.getElementById('category').value,
-                merchant: document.getElementById('merchant').value,
-                date: document.getElementById('date').value,
-                is_refunded: false
-            };
-
-            transactions.unshift(item);
-            if (supabaseClient) {
-                await supabaseClient.from('transactions').insert([item]);
+            } else {
+                transactions = [];
             }
             renderAll();
-            document.getElementById('transactionForm').reset();
-            document.getElementById('date').valueAsDate = new Date();
-            updateCategoryOptions();
         }
 
-        async function toggleRefund(id) {
-            const item = transactions.find(t => t.id === id);
-            if (item) {
-                item.is_refunded = !item.is_refunded;
-                if (supabaseClient) {
-                    await supabaseClient.from('transactions').update({ is_refunded: item.is_refunded }).eq('id', id);
-                }
-                renderAll();
+        // 保存至 LocalStorage
+        function saveLocalData() {
+            localStorage.setItem('smart_accounting_data', JSON.stringify(transactions));
+            renderAll();
+        }
+
+        // 处理新增记录
+        function handleAddTransaction(event) {
+            event.preventDefault();
+            const amount = parseFloat(document.getElementById('amount').value);
+            const category = document.getElementById('category').value;
+            const date = document.getElementById('date').value;
+            const description = document.getElementById('description').value || category;
+
+            if (!amount || amount <= 0) {
+                alert("请输入正确的交易金额");
+                return;
+            }
+
+            const newItem = {
+                id: Date.now().toString(),
+                type: currentType,
+                amount: amount,
+                category: category,
+                date: date,
+                description: description
+            };
+
+            transactions.unshift(newItem); // 添加至最前
+            saveLocalData();
+
+            // 清空重置表单
+            document.getElementById('amount').value = '';
+            document.getElementById('description').value = '';
+        }
+
+        // 删除某笔交易
+        function deleteTransaction(id) {
+            if (confirm("确定要删除这条记账记录吗？")) {
+                transactions = transactions.filter(item => item.id !== id);
+                saveLocalData();
             }
         }
 
-        async function deleteTransaction(id) {
-            if (confirm("确定删除这条记录吗？")) {
-                transactions = transactions.filter(t => t.id !== id);
-                if (supabaseClient) {
-                    await supabaseClient.from('transactions').delete().eq('id', id);
+        // 统一渲染界面（计算统计、更新图表、渲染列表）
+        function renderAll() {
+            let totalIncome = 0;
+            let totalExpense = 0;
+            const categorySums = {};
+
+            transactions.forEach(item => {
+                const val = parseFloat(item.amount) || 0;
+                if (item.type === 'income') {
+                    totalIncome += val;
+                } else {
+                    totalExpense += val;
+                    categorySums[item.category] = (categorySums[item.category] || 0) + val;
                 }
-                renderAll();
+            });
+
+            // 1. 更新顶部卡片数值
+            document.getElementById('totalIncome').innerText = `¥${totalIncome.toFixed(2)}`;
+            document.getElementById('totalExpense').innerText = `¥${totalExpense.toFixed(2)}`;
+            const net = totalIncome - totalExpense;
+            const netEl = document.getElementById('netBalance');
+            netEl.innerText = `¥${net.toFixed(2)}`;
+            netEl.className = `text-2xl font-bold ${net >= 0 ? 'text-slate-900' : 'text-rose-600'}`;
+
+            // 2. 渲染明细列表
+            const listEl = document.getElementById('transactionList');
+            document.getElementById('recordCount').innerText = `共 ${transactions.length} 笔`;
+
+            if (transactions.length === 0) {
+                listEl.innerHTML = `<div class="p-8 text-center text-slate-400 text-sm">暂无记账记录，快在左侧记一笔吧~</div>`;
+            } else {
+                listEl.innerHTML = transactions.map(item => `
+                    <div class="p-4 flex items-center justify-between hover:bg-slate-50 transition">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center ${item.type === 'income' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}">
+                                <i class="fa-solid ${item.type === 'income' ? 'fa-arrow-down' : 'fa-arrow-up'}"></i>
+                            </div>
+                            <div>
+                                <div class="font-medium text-slate-900 text-sm">${item.description}</div>
+                                <div class="text-xs text-slate-400">${item.date} · ${item.category}</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <span class="font-bold text-sm ${item.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}">
+                                ${item.type === 'income' ? '+' : '-'}${parseFloat(item.amount).toFixed(2)}
+                            </span>
+                            <button onclick="deleteTransaction('${item.id}')" class="text-slate-300 hover:text-rose-500 transition p-1">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
             }
+
+            // 3. 渲染分类图表
+            renderChart(categorySums);
         }
 
-        function renderMonthlyView() {
-            const selectedMonth = document.getElementById('monthlyPicker').value;
-            const monthlyData = transactions.filter(t => t.date && t.date.startsWith(selectedMonth) && !t.is_refunded && t.type === 'expense');
+        // 绘制/更新 Chart.js 饼图
+        function renderChart(categorySums) {
+            const ctx = document.getElementById('categoryChart').getContext('2d');
+            const labels = Object.keys(categorySums);
+            const data = Object.values(categorySums);
 
-            // Category Chart
-            const catMap = {};
-            monthlyData.forEach(t => catMap[t.category] = (catMap[t.category] || 0) + Number(t.amount));
-            
-            const ctxCat = document.getElementById('monthlyCategoryChart').getContext('2d');
-            if (monthlyCatChart) monthlyCatChart.destroy();
-            monthlyCatChart = new Chart(ctxCat, {
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            if (labels.length === 0) {
+                return;
+            }
+
+            chartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: Object.keys(catMap),
+                    labels: labels,
                     datasets: [{
-                        data: Object.values(catMap),
-                        backgroundColor: ['#8bab0f', '#a181cd', '#3b82f6', '#f43f5e', '#eab308', '#64748b']
+                        data: data,
+                        backgroundColor: [
+                            '#6366f1', '#ec4899', '#10b981', '#f59e0b',
+                            '#3b82f6', '#8b5cf6', '#14b8a6', '#f97316'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
                     }]
-                }
-            });
-
-            // Account Chart
-            const accMap = {};
-            monthlyData.forEach(t => accMap[t.account || '其他'] = (accMap[t.account || '其他'] || 0) + Number(t.amount));
-
-            const ctxAcc = document.getElementById('monthlyAccountChart').getContext('2d');
-            if (monthlyAccChart) monthlyAccChart.destroy();
-            monthlyAccChart = new Chart(ctxAcc, {
-                type: 'pie',
-                data: {
-                    labels: Object.keys(accMap),
-                    datasets: [{
-                        data: Object.values(accMap),
-                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6']
-                    }]
-                }
-            });
-        }
-
-        function renderAnnualView() {
-            const year = document.getElementById('annualYearPicker').value;
-            const months = Array.from({length: 12}, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
-            
-            const incomeData = new Array(12).fill(0);
-            const expenseData = new Array(12).fill(0);
-
-            transactions.forEach(t => {
-                if (t.date && t.date.startsWith(year) && !t.is_refunded) {
-                    const monthIndex = parseInt(t.date.split('-')[1]) - 1;
-                    if (monthIndex >= 0 && monthIndex < 12) {
-                        if (t.type === 'income') incomeData[monthIndex] += Number(t.amount);
-                        if (t.type === 'expense') expenseData[monthIndex] += Number(t.amount);
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                font: { size: 11 },
+                                boxWidth: 12
+                            }
+                        }
                     }
                 }
             });
-
-            const ctxTrend = document.getElementById('annualTrendChart').getContext('2d');
-            if (annualChart) annualChart.destroy();
-            annualChart = new Chart(ctxTrend, {
-                type: 'bar',
-                data: {
-                    labels: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
-                    datasets: [
-                        { label: '收入', data: incomeData, backgroundColor: '#8bab0f' },
-                        { label: '支出', data: expenseData, backgroundColor: '#f43f5e' }
-                    ]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
         }
 
-        function openConfigModal() { document.getElementById('configModal').classList.remove('hidden'); }
-        function closeConfigModal() { document.getElementById('configModal').classList.add('hidden'); }
-
-        function saveConfig() {
-            const url = document.getElementById('sbUrl').value.trim();
-            const key = document.getElementById('sbKey').value.trim();
-            localStorage.setItem('sb_url', url);
-            localStorage.setItem('sb_key', key);
-            initSupabase();
-            closeConfigModal();
-            alert("配置已成功保存并关联云端！");
-        }
-
+        // 导出备份文件 (.json)
         function exportBackup() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(transactions));
+            if (transactions.length === 0) {
+                alert("当前没有任何数据可导出！");
+                return;
+            }
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(transactions, null, 2));
             const downloadAnchor = document.createElement('a');
+            const fileName = `智能记账系统备份_${new Date().toISOString().slice(0, 10)}.json`;
             downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `记账数据备份_${new Date().toISOString().slice(0,10)}.json`);
+            downloadAnchor.setAttribute("download", fileName);
             document.body.appendChild(downloadAnchor);
             downloadAnchor.click();
             downloadAnchor.remove();
+        }
+
+        // 导入恢复备份数据
+        function importBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (Array.isArray(importedData)) {
+                        if (confirm(`从文件中成功读取到 ${importedData.length} 条数据，是否确认覆盖当前记录？`)) {
+                            transactions = importedData;
+                            saveLocalData();
+                            alert("恢复成功！数据已更新。");
+                        }
+                    } else {
+                        alert("备份文件格式不正确，请选择有效的记账备份 JSON 文件！");
+                    }
+                } catch (err) {
+                    alert("解析文件失败，文件内容格式可能被损坏！");
+                }
+            };
+            reader.readAsText(file);
+            // 清空 file input 的值，确保选择相同文件时仍能触发 onchange
+            event.target.value = '';
         }
     </script>
 </body>
